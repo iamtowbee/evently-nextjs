@@ -1,86 +1,180 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import Image from "next/image";
-import { CalendarDays, MapPin, Search, Heart } from "lucide-react";
+import { CalendarDays, MapPin, Menu, Heart } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { HeroSlider } from "@/components/hero-slider";
+import { SearchBar } from "@/components/search-bar";
+import { Navbar } from "@/components/navbar";
+import type { Event, FilterState } from "@/types/events";
 
 // Import our dummy events data
 import eventsData from "@/events.json";
-import Navbar from "@/components/navbar";
 
 export default function Component() {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [selectedCategory, setSelectedCategory] = React.useState("");
+  const [currentSlide, setCurrentSlide] = React.useState(0);
+  const [filteredEvents, setFilteredEvents] = React.useState<Event[]>(
+    eventsData.events
+  );
+  const [filters, setFilters] = React.useState<FilterState>({
+    searchTerm: "",
+    category: "All",
+    date: undefined,
+    location: "",
+    priceRange: [0, 1000],
+    onlyFreeEvents: false,
+  });
 
   // Featured events for the hero slider (first 5 events)
   const featuredEvents = eventsData.events.slice(0, 5);
-
-  // Filter events based on search term and category
-  const filteredEvents = eventsData.events.filter((event) => {
-    const matchesSearch =
-      event.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      event.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesCategory =
-      !selectedCategory || event.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
 
   // Get unique categories from events
   const categories = Array.from(
     new Set(eventsData.events.map((event) => event.category))
   );
 
+  const handleSearch = (searchTerm: string) => {
+    setFilters((prev) => ({ ...prev, searchTerm }));
+    filterEvents({ ...filters, searchTerm });
+  };
+
+  const handleFilterChange = (newFilters: Partial<FilterState>) => {
+    const updatedFilters = { ...filters, ...newFilters };
+    setFilters(updatedFilters);
+    filterEvents(updatedFilters);
+  };
+
+  const filterEvents = (currentFilters: FilterState) => {
+    let filtered = eventsData.events;
+
+    // Search term filter
+    if (currentFilters.searchTerm) {
+      const searchLower = currentFilters.searchTerm.toLowerCase();
+      filtered = filtered.filter(
+        (event) =>
+          event.name.toLowerCase().includes(searchLower) ||
+          event.description.toLowerCase().includes(searchLower)
+      );
+    }
+
+    // Category filter
+    if (currentFilters.category && currentFilters.category !== "All") {
+      filtered = filtered.filter(
+        (event) => event.category === currentFilters.category
+      );
+    }
+
+    // Date filter
+    if (currentFilters.date) {
+      const filterDate = currentFilters.date.toISOString().split("T")[0];
+      filtered = filtered.filter((event) => event.date === filterDate);
+    }
+
+    // Location filter
+    if (currentFilters.location) {
+      const locationLower = currentFilters.location.toLowerCase();
+      filtered = filtered.filter((event) =>
+        event.location.toLowerCase().includes(locationLower)
+      );
+    }
+
+    // Price range filter
+    if (currentFilters.priceRange) {
+      filtered = filtered.filter((event) => {
+        const price = event.price || 0;
+        return (
+          price >= currentFilters.priceRange[0] &&
+          price <= currentFilters.priceRange[1]
+        );
+      });
+    }
+
+    // Free events filter
+    if (currentFilters.onlyFreeEvents) {
+      filtered = filtered.filter((event) => !event.price || event.price === 0);
+    }
+    setFilteredEvents(filtered);
+  };
+
+  // Auto advance slider
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % featuredEvents.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [featuredEvents.length]);
+
   return (
     <div className="flex flex-col min-h-screen">
-      <Navbar />
+      {/* Navbar */}
+      <Navbar categories={categories} />
 
       <main className="flex-1">
         {/* Hero Slider */}
-        <HeroSlider events={featuredEvents} />
+        <section className="relative h-[500px] overflow-hidden">
+          {featuredEvents.map((event, index) => (
+            <div
+              key={event.id}
+              className={cn(
+                "absolute inset-0 transition-opacity duration-1000",
+                index === currentSlide ? "opacity-100" : "opacity-0"
+              )}
+            >
+              <Image
+                src={event.image}
+                alt={event.name}
+                className="object-cover"
+                fill
+                priority={index === 0}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
+                <span className="inline-block px-2 py-1 mb-2 text-sm bg-primary rounded">
+                  {event.category}
+                </span>
+                <h2 className="text-2xl md:text-4xl font-bold mb-2">
+                  {event.name}
+                </h2>
+                <div className="flex items-center space-x-4 text-sm">
+                  <span className="flex items-center">
+                    <CalendarDays className="w-4 h-4 mr-1" />
+                    {new Date(event.date).toLocaleDateString()}
+                  </span>
+                  <span className="flex items-center">
+                    <MapPin className="w-4 h-4 mr-1" />
+                    {event.location}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {featuredEvents.map((_, index) => (
+              <button
+                key={index}
+                className={cn(
+                  "w-2 h-2 rounded-full transition-colors",
+                  index === currentSlide ? "bg-white" : "bg-white/50"
+                )}
+                onClick={() => setCurrentSlide(index)}
+              >
+                <span className="sr-only">Go to slide {index + 1}</span>
+              </button>
+            ))}
+          </div>
+        </section>
 
         {/* Search Section */}
         <section className="py-12 container mx-auto px-4">
           <h2 className="text-3xl md:text-4xl font-bold text-center mb-8">
             Find Your Next Event
           </h2>
-          <div className="max-w-3xl mx-auto flex flex-col md:flex-row gap-4">
-            <div className="flex-1 relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search events..."
-                className="pl-10"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
-            </div>
-            <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
-            >
-              <SelectTrigger className="w-full md:w-[200px]">
-                <SelectValue placeholder="Category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem>All Categories</SelectItem>
-                {categories.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    {category}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <SearchBar
+            onSearch={handleSearch}
+            onFilterChange={handleFilterChange}
+          />
         </section>
 
         {/* Event Grid */}
