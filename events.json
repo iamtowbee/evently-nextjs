@@ -1,0 +1,204 @@
+{
+  "events": [
+    {
+      "id": 1,
+      "name": "Summer Music Festival",
+      "date": "2024-07-15",
+      "time": "14:00",
+      "location": "Central Park, New York",
+      "description": "A day-long music festival featuring local and international artists across multiple genres.",
+      "category": "Music",
+      "image": "https://images.unsplash.com/photo-1470229722913-7c0e2dbbafd3?w=500&q=80"
+    },
+    {
+      "id": 2,
+      "name": "Food Truck Bonanza",
+      "date": "2024-06-22",
+      "time": "11:00",
+      "location": "Waterfront Park, San Francisco",
+      "description": "Experience a variety of cuisines from over 30 food trucks gathered in one location.",
+      "category": "Food",
+      "image": "https://images.unsplash.com/photo-1565123409695-7b5ef63a2efb?w=500&q=80"
+    },
+    {
+      "id": 3,
+      "name": "Tech Networking Mixer",
+      "date": "2024-09-05",
+      "time": "18:30",
+      "location": "Innovation Hub, Seattle",
+      "description": "Connect with professionals in the tech industry and explore new career opportunities.",
+      "category": "Networking",
+      "image": "https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=500&q=80"
+    },
+    {
+      "id": 4,
+      "name": "Marathon for Charity",
+      "date": "2024-10-10",
+      "time": "07:00",
+      "location": "Downtown Chicago",
+      "description": "Annual marathon to raise funds for local charities. All skill levels welcome.",
+      "category": "Sports",
+      "image": "https://images.unsplash.com/photo-1452626038306-9aae5e071dd3?w=500&q=80"
+    },
+    {
+      "id": 5,
+      "name": "Art in the Park",
+      "date": "2024-05-18",
+      "time": "10:00",
+      "location": "Millennium Park, Chicago",
+      "description": "Open-air art exhibition featuring works from local artists. Includes live performances and workshops.",
+      "category": "Art",
+      "image": "https://images.unsplash.com/photo-1460661419201-fd4cecdf8a8b?w=500&q=80"
+    },
+    {
+      "id": 6,
+      "name": "Startup Pitch Night",
+      "date": "2024-11-15",
+      "time": "19:00",
+      "location": "Tech Incubator, Austin",
+      "description": "Watch innovative startups pitch their ideas to a panel of investors and industry experts.",
+      "category": "Networking",
+      "image": "https://images.unsplash.com/photo-1475721027785-f74eccf877e2?w=500&q=80"
+    },
+    {
+      "id": 7,
+      "name": "Jazz in the Gardens",
+      "date": "2024-08-20",
+      "time": "16:00",
+      "location": "Botanical Gardens, New Orleans",
+      "description": "An evening of smooth jazz performances set in the beautiful surroundings of the botanical gardens.",
+      "category": "Music",
+      "image": "https://images.unsplash.com/photo-1415201364774-f6f0bb35f28f?w=500&q=80"
+    },
+    {
+      "id": 8,
+      "name": "Craft Beer Festival",
+      "date": "2024-09-30",
+      "time": "12:00",
+      "location": "Riverfront Brewery, Portland",
+      "description": "Sample craft beers from over 50 local and regional breweries. Food pairings available.",
+      "category": "Food",
+      "image": "https://images.unsplash.com/photo-1575037614876-c38a4d44f5b8?w=500&q=80"
+    },
+    {
+      "id": 9,
+      "name": "Yoga in the Sky",
+      "date": "2024-07-01",
+      "time": "07:30",
+      "location": "Skydeck, Willis Tower, Chicago",
+      "description": "Start your day with a rejuvenating yoga session 1,353 feet above the city streets.",
+      "category": "Sports",
+      "image": "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=500&q=80"
+    },
+    {
+      "id": 10,
+      "name": "Artificial Intelligence Symposium",
+      "date": "2024-10-25",
+      "time": "09:00",
+      "location": "Convention Center, Las Vegas",
+      "description": "A two-day conference exploring the latest advancements and applications of AI across industries.",
+      "category": "Technology",
+      "image": "https://images.unsplash.com/photo-1485827404703-89b55fcc595e?w=500&q=80"
+    },
+    {
+      "id": 11,
+      "name": "Farmers Market & Cooking Demo",
+      "date": "2024-06-08",
+      "time": "08:00",
+      "location": "Community Center, Boulder",
+      "description": "Shop for fresh, local produce and watch live cooking demonstrations using seasonal ingredients.",
+      "category": "Food",
+      "image": "https://images.unsplash.com/photo-1488459716781-31db52582fe9?w=500&q=80"
+    },
+    {
+      "id": 12,
+      "name": "Indie Film Festival",
+      "date": "2024-08-10",
+      "time": "11:00",
+      "location": "Arthaus Cinema, Austin",
+      "description": "A week-long celebration of independent films from around the world, including Q&A sessions with directors.",
+      "category": "Art",
+      "image": "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=500&q=80"
+    },
+    {
+      "id": 13,
+      "name": "Hackathon for Social Good",
+      "date": "2024-11-03",
+      "time": "09:00",
+      "location": "University Campus, Boston",
+      "description": "A 48-hour coding marathon to develop innovative solutions for pressing social issues.",
+      "category": "Technology",
+      "image": "https://images.unsplash.com/photo-1504384308090-c894fdcc538d?w=500&q=80"
+    },
+    {
+      "id": 14,
+      "name": "Salsa Night",
+      "date": "2024-07-28",
+      "time": "20:00",
+      "location": "Havana Club, Miami",
+      "description": "Learn and dance to the rhythms of salsa, bachata, and merengue with professional instructors.",
+      "category": "Music",
+      "image": "https://images.unsplash.com/photo-1545128485-c400e7702796?w=500&q=80"
+    },
+    {
+      "id": 15,
+      "name": "Eco-Friendly Home Expo",
+      "date": "2024-09-15",
+      "time": "10:00",
+      "location": "Green Living Center, Seattle",
+      "description": "Discover the latest in sustainable home technologies, from solar panels to smart thermostats.",
+      "category": "Technology",
+      "image": "https://images.unsplash.com/photo-1489171084589-9b5031ebcf9b?w=500&q=80"
+    },
+    {
+      "id": 16,
+      "name": "Vintage Car Show",
+      "date": "2024-06-30",
+      "time": "11:00",
+      "location": "Fairgrounds, Detroit",
+      "description": "Admire beautifully restored classic cars from the 1920s to the 1970s. Includes a swap meet for enthusiasts.",
+      "category": "Automotive",
+      "image": "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?w=500&q=80"
+    },
+    {
+      "id": 17,
+      "name": "Stargazing Night",
+      "date": "2024-08-12",
+      "time": "21:00",
+      "location": "Observatory, Flagstaff",
+      "description": "Join astronomers for a night of stargazing and learn about constellations and celestial events.",
+      "category": "Science",
+      "image": "https://images.unsplash.com/photo-1519681393784-d120267933ba?w=500&q=80"
+    },
+    {
+      "id": 18,
+      "name": "Wellness Retreat",
+      "date": "2024-10-05",
+      "time": "08:00",
+      "location": "Mountain Resort, Aspen",
+      "description": "A weekend of mindfulness, yoga, and healthy living workshops in a serene mountain setting.",
+      "category": "Health",
+      "image": "https://images.unsplash.com/photo-1544367567-0f2fcb009e0b?w=500&q=80"
+    },
+    {
+      "id": 19,
+      "name": "Comic Book Convention",
+      "date": "2024-07-20",
+      "time": "10:00",
+      "location": "Convention Center, San Diego",
+      "description": "The ultimate gathering for comic book fans, featuring artist meet-and-greets, cosplay contests, and exclusive merchandise.",
+      "category": "Entertainment",
+      "image": "https://images.unsplash.com/photo-1612036782180-6f0b6cd846fe?w=500&q=80"
+    },
+    {
+      "id": 20,
+      "name": "Gourmet Food and Wine Pairing",
+      "date": "2024-09-22",
+      "time": "18:00",
+      "location": "Luxury Hotel, Napa Valley",
+      "description": "Indulge in a five-course meal expertly paired with wines from renowned local vineyards.",
+      "category": "Food",
+      "image": "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?w=500&q=80"
+    }
+  ]
+}
