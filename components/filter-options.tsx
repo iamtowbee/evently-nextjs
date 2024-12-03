@@ -1,15 +1,15 @@
 "use client";
 
 import * as React from "react";
-import { Calendar as CalendarIcon, X } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+} from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -17,238 +17,124 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useForm } from "react-hook-form";
+import * as z from "zod";
+import { FilterState } from "@/types/filters";
+
+const formSchema = z.object({
+  location: z.string().optional(),
+  eventType: z.string().optional(),
+  dateRange: z.date().optional(),
+  sortBy: z.string().optional(),
+});
 
 interface FilterOptionsProps {
-  onFilterChange: (filters: FilterState) => void;
-  onClose?: () => void;
+  onChange: (filters: FilterState) => void;
 }
 
-interface FilterState {
-  location: string;
-  eventType: string;
-  sortBy: string;
-  dateRange: {
-    from: Date | undefined;
-    to: Date | undefined;
-  };
-  quickDates: string[];
-}
-
-const eventTypes = [
-  "All Events",
-  "Music",
-  "Food",
-  "Sports",
-  "Art",
-  "Technology",
-  "Networking",
-];
-
-const sortOptions = [
-  "Date: Newest First",
-  "Date: Oldest First",
-  "Price: Low to High",
-  "Price: High to Low",
-  "Popularity",
-];
-
-const quickDateOptions = [
-  { id: "today", label: "Today" },
-  { id: "tomorrow", label: "Tomorrow" },
-  { id: "weekend", label: "Weekend" },
-  { id: "week", label: "This Week" },
-  { id: "month", label: "This Month" },
-  { id: "year", label: "This Year" },
-];
-
-export function FilterOptions({ onFilterChange, onClose }: FilterOptionsProps) {
-  const [filters, setFilters] = React.useState<FilterState>({
-    location: "",
-    eventType: "All Events",
-    sortBy: "Date: Newest First",
-    dateRange: {
-      from: undefined,
-      to: undefined,
+export function FilterOptions({ onChange }: FilterOptionsProps) {
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      location: "",
+      eventType: "",
+      sortBy: "newest",
     },
-    quickDates: [],
   });
 
-  const handleFilterChange = (updates: Partial<FilterState>) => {
-    const newFilters = { ...filters, ...updates };
-    setFilters(newFilters);
-  };
-
-  const handleApplyFilters = () => {
-    onFilterChange(filters);
-    onClose?.();
-  };
-
-  const handleReset = () => {
-    const resetFilters = {
-      location: "",
-      eventType: "All Events",
-      sortBy: "Date: Newest First",
-      dateRange: {
-        from: undefined,
-        to: undefined,
-      },
-      quickDates: [],
-    };
-    setFilters(resetFilters);
-    onFilterChange(resetFilters);
-  };
+  // Watch form values and call onChange
+  React.useEffect(() => {
+    const subscription = form.watch((value) => {
+      onChange(value as FilterState);
+    });
+    return () => subscription.unsubscribe();
+  }, [form, onChange]);
 
   return (
-    <div className="w-[300px] p-4 space-y-4">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="font-semibold">Filters</h3>
-        {onClose && (
-          <Button variant="ghost" size="icon" onClick={onClose}>
-            <X className="h-4 w-4" />
-          </Button>
-        )}
-      </div>
-
-      <div className="space-y-2">
-        <Label>Location</Label>
-        <Input
-          placeholder="Enter location"
-          value={filters.location}
-          onChange={(e) => handleFilterChange({ location: e.target.value })}
+    <Form {...form}>
+      <form className="grid gap-4 pt-4">
+        <FormField
+          control={form.control}
+          name="location"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Location</FormLabel>
+              <FormControl>
+                <Input
+                  placeholder="Enter location..."
+                  className="bg-muted border-0 focus-visible:ring-1 focus-visible:ring-primary"
+                  {...field}
+                />
+              </FormControl>
+            </FormItem>
+          )}
         />
-      </div>
 
-      <div className="space-y-2">
-        <Label>Event Type</Label>
-        <Select
-          value={filters.eventType}
-          onValueChange={(value) => handleFilterChange({ eventType: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select type" />
-          </SelectTrigger>
-          <SelectContent>
-            {eventTypes.map((type) => (
-              <SelectItem key={type} value={type}>
-                {type}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <FormField
+          control={form.control}
+          name="eventType"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Event Type</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-muted border-0 focus:ring-1 focus:ring-primary">
+                    <SelectValue placeholder="Select event type" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="all">All Events</SelectItem>
+                  <SelectItem value="virtual">Virtual</SelectItem>
+                  <SelectItem value="in-person">In Person</SelectItem>
+                  <SelectItem value="hybrid">Hybrid</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
 
-      <div className="space-y-2">
-        <Label>Sort By</Label>
-        <Select
-          value={filters.sortBy}
-          onValueChange={(value) => handleFilterChange({ sortBy: value })}
-        >
-          <SelectTrigger>
-            <SelectValue placeholder="Select sorting" />
-          </SelectTrigger>
-          <SelectContent>
-            {sortOptions.map((option) => (
-              <SelectItem key={option} value={option}>
-                {option}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+        <FormField
+          control={form.control}
+          name="sortBy"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Sort By</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger className="bg-muted border-0 focus:ring-1 focus:ring-primary">
+                    <SelectValue placeholder="Sort by..." />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="newest">Date: Newest First</SelectItem>
+                  <SelectItem value="oldest">Date: Oldest First</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </FormItem>
+          )}
+        />
 
-      <div className="space-y-2">
-        <Label>Date Range</Label>
-        <div className="grid gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.dateRange.from
-                  ? filters.dateRange.from.toLocaleDateString()
-                  : "From date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={filters.dateRange.from}
-                onSelect={(date) =>
-                  handleFilterChange({
-                    dateRange: { ...filters.dateRange, from: date },
-                  })
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                className="w-full justify-start text-left font-normal"
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {filters.dateRange.to
-                  ? filters.dateRange.to.toLocaleDateString()
-                  : "To date"}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0" align="start">
-              <Calendar
-                mode="single"
-                selected={filters.dateRange.to}
-                onSelect={(date) =>
-                  handleFilterChange({
-                    dateRange: { ...filters.dateRange, to: date },
-                  })
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-        </div>
-      </div>
-
-      <div className="space-y-2">
-        <Label>Quick Select</Label>
-        <div className="space-y-2">
-          {quickDateOptions.map((option) => (
-            <div key={option.id} className="flex items-center space-x-2">
-              <Checkbox
-                id={option.id}
-                checked={filters.quickDates.includes(option.id)}
-                onCheckedChange={(checked) => {
-                  handleFilterChange({
-                    quickDates: checked
-                      ? [...filters.quickDates, option.id]
-                      : filters.quickDates.filter((id) => id !== option.id),
-                  });
-                }}
-              />
-              <Label htmlFor={option.id} className="font-normal">
-                {option.label}
-              </Label>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="space-y-2 pt-4">
-        <Button
-          className="w-full bg-[#7e22ce] hover:bg-[#6b21a8]"
-          onClick={handleApplyFilters}
-        >
-          Apply Filters
-        </Button>
-        <Button variant="outline" className="w-full" onClick={handleReset}>
-          Reset
-        </Button>
-      </div>
-    </div>
+        <FormField
+          control={form.control}
+          name="dateRange"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Date</FormLabel>
+              <FormControl>
+                <Calendar
+                  mode="single"
+                  selected={field.value}
+                  onSelect={field.onChange}
+                  className="rounded-md border bg-muted"
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+      </form>
+    </Form>
   );
 }

@@ -2,7 +2,9 @@
 
 import * as React from "react";
 import Image from "next/image";
-import { CalendarDays, MapPin } from "lucide-react";
+import Link from "next/link";
+import { format } from "date-fns";
+import { CalendarDays, Clock, MapPin } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Carousel,
@@ -11,59 +13,95 @@ import {
   CarouselNext,
   CarouselPrevious,
 } from "@/components/ui/carousel";
-import { cn } from "@/lib/utils";
+import Autoplay from "embla-carousel-autoplay";
+import { getImageUrl } from "@/lib/utils";
+import type { Event } from "@/types/event";
 
-type Event = {
-  id: number;
-  name: string;
-  date: string;
-  time: string;
-  location: string;
-  description: string;
-  category: string;
-  image: string;
-};
+interface HeroSliderProps {
+  events: Event[];
+}
 
-export function HeroSlider({ events }: { events: Event[] }) {
+export function HeroSlider({ events }: HeroSliderProps) {
+  const plugin = React.useRef(
+    Autoplay({ delay: 5000, stopOnInteraction: true })
+  );
+
   return (
-    <Carousel className="relative h-[500px] w-full">
-      <CarouselContent>
-        {events.map((event) => (
-          <CarouselItem key={event.id}>
-            <div className="relative h-[500px] w-full overflow-hidden">
-              <Image
-                src={event.image}
-                alt={event.name}
-                className="object-cover"
-                fill
-                priority
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-0 left-0 right-0 p-6 text-white">
-                <span className="inline-block px-2 py-1 mb-2 text-sm bg-primary rounded">
-                  {event.category}
-                </span>
-                <h2 className="text-2xl md:text-4xl font-bold mb-2">
-                  {event.name}
-                </h2>
-                <div className="flex flex-wrap items-center gap-4 text-sm mb-4">
-                  <span className="flex items-center">
-                    <CalendarDays className="w-4 h-4 mr-1" />
-                    {new Date(event.date).toLocaleDateString()} at {event.time}
-                  </span>
-                  <span className="flex items-center">
-                    <MapPin className="w-4 h-4 mr-1" />
-                    {event.location}
-                  </span>
+    <section className="bg-muted/30">
+      <div className="container py-8">
+        <Carousel
+          plugins={[plugin.current]}
+          className="w-full"
+          onMouseEnter={plugin.current.stop}
+          onMouseLeave={plugin.current.reset}
+        >
+          <CarouselContent>
+            {events.map((event) => (
+              <CarouselItem key={event.id}>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                  <div className="space-y-6">
+                    <div className="space-y-4">
+                      <h2 className="text-3xl md:text-4xl font-heading font-semibold">
+                        {event.name}
+                      </h2>
+                      <p className="text-muted-foreground line-clamp-3">
+                        {event.description}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center text-muted-foreground">
+                        <MapPin className="w-4 h-4 mr-2 text-primary" />
+                        <span className="text-sm">{event.location}</span>
+                      </div>
+
+                      <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center">
+                          <CalendarDays className="w-4 h-4 mr-2 text-primary" />
+                          <span>
+                            {format(new Date(event.date), "MMM d, yyyy")}
+                          </span>
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="w-4 h-4 mr-2 text-primary" />
+                          <span>
+                            {event.start_time} - {event.end_time}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="text-2xl font-semibold">
+                        {event.is_free ? (
+                          <span className="text-success">Free</span>
+                        ) : (
+                          <span>${event.price}</span>
+                        )}
+                      </div>
+                      <Button asChild>
+                        <Link href={`/events/${event.slug}`}>View Details</Link>
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="relative aspect-[4/3] overflow-hidden rounded-lg">
+                    <Image
+                      src={getImageUrl(event.image_url)}
+                      alt={event.name}
+                      fill
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
                 </div>
-                <Button>View Event</Button>
-              </div>
-            </div>
-          </CarouselItem>
-        ))}
-      </CarouselContent>
-      <CarouselPrevious className="absolute left-4 top-1/2 -translate-y-1/2" />
-      <CarouselNext className="absolute right-4 top-1/2 -translate-y-1/2" />
-    </Carousel>
+              </CarouselItem>
+            ))}
+          </CarouselContent>
+          <CarouselPrevious />
+          <CarouselNext />
+        </Carousel>
+      </div>
+    </section>
   );
 }

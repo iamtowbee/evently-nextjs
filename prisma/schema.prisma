@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["multiSchema"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+  schemas   = ["public", "auth"]
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+  @@schema("auth")
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+  @@schema("auth")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+  @@schema("auth")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  name          String?
+  email         String    @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  role          String    @default("user")
+  events        Event[]   @relation("Organizer")
+  attending     Event[]   @relation("Attendees")
+  accounts      Account[]
+  sessions      Session[]
+
+  @@map("users")
+  @@schema("public")
+}
+
+model Category {
+  id          String    @id @default(cuid())
+  createdAt   DateTime  @default(now()) @map("created_at")
+  name        String    @unique
+  slug        String    @unique
+  description String?
+  events      Event[]
+
+  @@map("categories")
+  @@schema("public")
+}
+
+model Event {
+  id            String     @id @default(cuid())
+  created_at    DateTime   @default(now())
+  updated_at    DateTime   @updatedAt
+  name          String
+  slug          String     @unique
+  description   String?
+  location      String?
+  venue         String?
+  date          DateTime
+  start_time    String
+  end_time      String
+  image_url     String?
+  is_featured   Boolean    @default(false)
+  is_free       Boolean    @default(false)
+  price         Float?
+  max_attendees Int?
+  attendee_count Int       @default(0)
+  category_id   String?
+  organizer_id  String?
+  category      Category?  @relation(fields: [category_id], references: [id])
+  organizer     User?      @relation("Organizer", fields: [organizer_id], references: [id])
+  attendees     User[]     @relation("Attendees")
+
+  @@map("events")
+  @@schema("public")
+}
+
+model VirtualEvent {
+  id         String   @id @default(cuid())
+  createdAt  DateTime @default(now()) @map("created_at")
+  eventId    String   @unique @map("event_id")
+  platform   String
+  url        String
+  meetingId  String?  @map("meeting_id")
+  passcode   String?
+
+  @@map("virtual_events")
+  @@schema("public")
+} 

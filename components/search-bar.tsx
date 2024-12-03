@@ -1,60 +1,110 @@
 "use client";
 
 import * as React from "react";
-import { Search, SlidersHorizontal } from "lucide-react";
+import { Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+import { Card, CardContent } from "@/components/ui/card";
 import { FilterOptions } from "./filter-options";
+import { FilterState } from "@/types/filters";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useSearchParams } from "next/navigation";
 
 interface SearchBarProps {
   onSearch: (term: string) => void;
-  onFilterChange: (filters: any) => void;
+  onFilterChange: (filters: FilterState) => void;
+  isLoading?: boolean;
 }
 
-export function SearchBar({ onSearch, onFilterChange }: SearchBarProps) {
-  const [searchTerm, setSearchTerm] = React.useState("");
-  const [isFiltersOpen, setIsFiltersOpen] = React.useState(false);
+export function SearchBar({
+  onSearch,
+  onFilterChange,
+  isLoading = false,
+}: SearchBarProps) {
+  const searchParams = useSearchParams();
+  const [showFilters, setShowFilters] = React.useState(false);
+  const [searchTerm, setSearchTerm] = React.useState(
+    searchParams.get("search") || ""
+  );
+  const [localLoading, setLocalLoading] = React.useState(false);
+  const debouncedSearchTerm = useDebounce(searchTerm, 300);
 
-  const handleSearch = () => {
-    onSearch(searchTerm);
+  // Update search term when URL params change
+  React.useEffect(() => {
+    const currentSearchTerm = searchParams.get("search") || "";
+    if (currentSearchTerm !== searchTerm) {
+      setSearchTerm(currentSearchTerm);
+    }
+  }, [searchParams]);
+
+  // Handle search when debounced term changes
+  React.useEffect(() => {
+    const handleSearch = async () => {
+      setLocalLoading(true);
+      await onSearch(debouncedSearchTerm);
+      setLocalLoading(false);
+    };
+
+    handleSearch();
+  }, [debouncedSearchTerm, onSearch]);
+
+  // Handle keyboard events
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === "Escape") {
+      setSearchTerm("");
+    }
+  };
+
+  // Clear search
+  const handleClear = () => {
+    setSearchTerm("");
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2 max-w-3xl w-full mx-auto">
-      <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
-        <Input
-          placeholder="Search events..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
-      <Popover open={isFiltersOpen} onOpenChange={setIsFiltersOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="gap-2">
+    <Card>
+      <CardContent className="p-3">
+        <div className="flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              placeholder="Search events..."
+              className="pl-9 pr-10 bg-muted border-0 focus-visible:ring-1 focus-visible:ring-primary"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={handleKeyDown}
+            />
+            {isLoading || localLoading ? (
+              <div className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2">
+                <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : searchTerm ? (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 text-muted-foreground hover:text-foreground"
+                onClick={handleClear}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </Button>
+            ) : null}
+          </div>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => setShowFilters(!showFilters)}
+            className={
+              showFilters
+                ? "bg-primary/10"
+                : "bg-muted border-0 hover:bg-muted/80"
+            }
+          >
             <SlidersHorizontal className="h-4 w-4" />
-            Filters
           </Button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-0" align="end">
-          <FilterOptions
-            onFilterChange={onFilterChange}
-            onClose={() => setIsFiltersOpen(false)}
-          />
-        </PopoverContent>
-      </Popover>
-      <Button
-        onClick={handleSearch}
-        className="bg-[#7e22ce] hover:bg-[#6b21a8] text-white"
-      >
-        Search
-      </Button>
-    </div>
+        </div>
+        {showFilters && <FilterOptions onChange={onFilterChange} />}
+      </CardContent>
+    </Card>
   );
 }
