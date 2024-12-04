@@ -6,16 +6,12 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
 
-export function slugify(text: string) {
-  return text
-    .toString()
+export function slugify(str: string) {
+  return str
     .toLowerCase()
-    .trim()
-    .replace(/\s+/g, "-") // Replace spaces with -
-    .replace(/[^\w\-]+/g, "") // Remove all non-word chars
-    .replace(/\-\-+/g, "-") // Replace multiple - with single -
-    .replace(/^-+/, "") // Trim - from start of text
-    .replace(/-+$/, ""); // Trim - from end of text
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
 }
 
 export type DatabaseError = {
@@ -30,15 +26,15 @@ export async function withErrorHandling<T>(
   retries = 3,
   delay = 1000
 ): Promise<{ data: T | null; error: DatabaseError | null }> {
-  let lastError: any = null;
+  let lastError: Error | null = null;
   let attempts = 0;
 
   while (attempts < retries) {
     try {
       const result = await operation();
       return { data: result, error: null };
-    } catch (error) {
-      lastError = error;
+    } catch (error: unknown) {
+      lastError = error instanceof Error ? error : new Error(String(error));
       attempts++;
 
       if (error instanceof Prisma.PrismaClientInitializationError) {
@@ -57,18 +53,17 @@ export async function withErrorHandling<T>(
             isRetryable: false,
           },
         };
-      } else {
-        // Unknown errors, return immediately
-        return {
-          data: fallback,
-          error: {
-            code: "UNKNOWN_ERROR",
-            message:
-              error instanceof Error ? error.message : "Unknown error occurred",
-            isRetryable: false,
-          },
-        };
       }
+
+      // Unknown errors, return immediately
+      return {
+        data: fallback,
+        error: {
+          code: "UNKNOWN_ERROR",
+          message: lastError.message || "Unknown error occurred",
+          isRetryable: false,
+        },
+      };
     }
   }
 
@@ -76,7 +71,7 @@ export async function withErrorHandling<T>(
   return {
     data: fallback,
     error: {
-      code: lastError?.code || "CONNECTION_ERROR",
+      code: "CONNECTION_ERROR",
       message: "Failed to connect to database after multiple attempts",
       isRetryable: true,
     },

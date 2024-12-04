@@ -6,7 +6,7 @@ import { getCategories } from "@/lib/actions/category";
 export const dynamic = "force-dynamic";
 
 export default async function Page() {
-  const [allEvents, featuredEvents, { categories }] = await Promise.all([
+  const [events, featured, categories] = await Promise.all([
     getEvents({ limit: 10 }),
     getEvents({ featured: true, limit: 3 }),
     getCategories(),
@@ -16,9 +16,9 @@ export default async function Page() {
     <main className="flex-1">
       <Suspense fallback={<div>Loading content...</div>}>
         <HomeContent
-          initialEvents={allEvents.events}
-          initialFeaturedEvents={featuredEvents.events}
-          initialCategories={categories}
+          initialEvents={events?.events || []}
+          initialFeaturedEvents={featured?.events || []}
+          initialCategories={categories?.categories || []}
         />
       </Suspense>
     </main>

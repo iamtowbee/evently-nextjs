@@ -22,14 +22,21 @@ export interface Event {
     id: string;
     name: string;
     slug: string;
-  };
+    description: string | null;
+    createdAt: Date;
+  } | null;
   organizer?: {
     id: string;
-    name: string;
-  };
+    name: string | null;
+  } | null;
   _count?: {
     attendees: number;
   };
+  attendees?: {
+    id: string;
+    name: string | null;
+    image: string | null;
+  }[];
 }
 
 export type EventResponse = {
@@ -38,3 +45,7 @@ export type EventResponse = {
   totalPages: number;
   currentPage: number;
 };
+
+export type EventActionResult =
+  | { success: true; event: Event }
+  | { success: false; event: null; error: string };

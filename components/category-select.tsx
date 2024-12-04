@@ -1,8 +1,7 @@
 "use client";
 
-import { useQuery } from "@tanstack/react-query";
-import { client } from "@/sanity/lib/client";
-import { categoriesQuery } from "@/sanity/lib/queries";
+import { useState } from "react";
+import { getCategories } from "@/lib/actions/category";
 import {
   FormControl,
   FormItem,
@@ -18,44 +17,50 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
-
-interface Category {
-  _id: string;
-  name: string;
-  slug: string;
-}
+import { useQuery } from "@tanstack/react-query";
 
 interface CategorySelectProps {
-  field: any;
-  form: any; // We'll need the form context for the "Other" description
+  onValueChange: (value: string) => void;
+  defaultValue?: string;
 }
 
-export function CategorySelect({ field, form }: CategorySelectProps) {
+export function CategorySelect({
+  onValueChange,
+  defaultValue,
+}: CategorySelectProps) {
   const [showOtherInput, setShowOtherInput] = useState(false);
+  const [otherCategory, setOtherCategory] = useState("");
 
-  const { data: categories, isLoading: isLoadingCategories } = useQuery({
+  const { data: categoriesData, isLoading: isLoadingCategories } = useQuery({
     queryKey: ["categories"],
     queryFn: async () => {
-      return client.fetch<Category[]>(categoriesQuery);
+      const result = await getCategories();
+      return result?.categories || [];
     },
   });
 
   const handleCategoryChange = (value: string) => {
-    field.onChange(value);
+    onValueChange(value);
     setShowOtherInput(value === "other");
-
-    // Reset the other category description when switching away from "Other"
     if (value !== "other") {
-      form.setValue("otherCategoryDescription", "");
+      setOtherCategory("");
     }
+  };
+
+  const handleOtherCategoryChange = (value: string) => {
+    setOtherCategory(value);
+    // You could implement logic here to handle the suggested category
+    // For example, store it in a separate table or send it to an admin
   };
 
   return (
     <>
       <FormItem>
         <FormLabel>Category</FormLabel>
-        <Select onValueChange={handleCategoryChange} defaultValue={field.value}>
+        <Select
+          onValueChange={handleCategoryChange}
+          defaultValue={defaultValue}
+        >
           <FormControl>
             <SelectTrigger>
               <SelectValue placeholder="Select a category" />
@@ -66,10 +71,10 @@ export function CategorySelect({ field, form }: CategorySelectProps) {
               <SelectItem value="loading" disabled>
                 Loading categories...
               </SelectItem>
-            ) : categories?.length ? (
+            ) : categoriesData?.length ? (
               <>
-                {categories.map((category) => (
-                  <SelectItem key={category._id} value={category._id}>
+                {categoriesData.map((category) => (
+                  <SelectItem key={category.id} value={category.id}>
                     {category.name}
                   </SelectItem>
                 ))}
@@ -93,7 +98,8 @@ export function CategorySelect({ field, form }: CategorySelectProps) {
           <FormControl>
             <Input
               placeholder="e.g., Virtual Events, Workshops, etc."
-              {...form.register("otherCategoryDescription")}
+              value={otherCategory}
+              onChange={(e) => handleOtherCategoryChange(e.target.value)}
             />
           </FormControl>
           <FormDescription>

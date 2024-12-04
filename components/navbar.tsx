@@ -3,7 +3,6 @@
 import Link from "next/link";
 import { ThemeSwitch } from "./theme-switch";
 import { cn } from "@/lib/utils";
-import { usePathname } from "next/navigation";
 import { AuthButton } from "./auth-button";
 import { Button } from "./ui/button";
 import { Plus } from "lucide-react";
@@ -15,7 +14,6 @@ interface NavbarProps {
 }
 
 export function Navbar({ categories = [] }: NavbarProps) {
-  const pathname = usePathname();
   const { status } = useSession();
 
   return (

@@ -4,9 +4,8 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { CalendarIcon, Clock, Globe, MapPin } from "lucide-react";
+import { CalendarIcon, Globe, MapPin } from "lucide-react";
 import { format } from "date-fns";
-import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -36,18 +35,11 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
-import { getCategories } from "@/lib/actions/category";
 import { createEvent } from "@/lib/actions/event";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { UploadButton } from "@/components/ui/upload-button";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
+import { CategorySelect } from "@/components/category-select";
 
 const EVENT_TYPES = [
   {
@@ -131,20 +123,6 @@ export function CreateEventForm() {
 
   // Watch event type to show/hide conditional fields
   const eventType = form.watch("event_type");
-
-  // Use React Query for categories with error handling
-  const {
-    data: categoriesData,
-    isLoading: isLoadingCategories,
-    error: categoriesError,
-  } = useQuery({
-    queryKey: ["categories"],
-    queryFn: getCategories,
-    retry: 3, // Will retry failed requests 3 times
-    retryDelay: (attemptIndex) => Math.min(1000 * 2 ** attemptIndex, 30000),
-  });
-
-  const categories = categoriesData?.categories || [];
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
@@ -433,41 +411,10 @@ export function CreateEventForm() {
               control={form.control}
               name="category_id"
               render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Category</FormLabel>
-                  <Select
-                    onValueChange={field.onChange}
-                    defaultValue={field.value}
-                  >
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a category" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {isLoadingCategories ? (
-                        <SelectItem value="loading" disabled>
-                          Loading categories...
-                        </SelectItem>
-                      ) : categoriesError ? (
-                        <SelectItem value="error" disabled>
-                          Failed to load categories. Please try again.
-                        </SelectItem>
-                      ) : categories?.length ? (
-                        categories.map((category) => (
-                          <SelectItem key={category.id} value={category.id}>
-                            {category.name}
-                          </SelectItem>
-                        ))
-                      ) : (
-                        <SelectItem value="no-categories" disabled>
-                          No categories found
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
+                <CategorySelect
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                />
               )}
             />
 

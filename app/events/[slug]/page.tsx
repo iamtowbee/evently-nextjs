@@ -8,14 +8,12 @@ import { Badge } from "@/components/ui/badge";
 import { getEventBySlug } from "@/lib/actions/event";
 import { getImageUrl } from "@/lib/utils";
 
-interface EventPageProps {
-  params: {
-    slug: string;
-  };
-}
+type Props = {
+  params: Promise<{ slug: string }>;
+};
 
-export default async function EventPage({ params }: EventPageProps) {
-  const { slug } = await Promise.resolve(params);
+export default async function EventPage({ params }: Props) {
+  const { slug } = await params;
   const result = await getEventBySlug(slug);
 
   if (!result?.data) {

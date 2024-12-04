@@ -31,7 +31,7 @@ export function CategoryTags({
               "transition-all",
               !selectedCategory
                 ? "border-primary bg-primary/10 text-primary"
-                : "bg-background hover:bg-muted"
+                : "bg-background hover:text-primary hover:border-primary hover:bg-muted"
             )}
             onClick={() => onSelectCategory(undefined)}
           >

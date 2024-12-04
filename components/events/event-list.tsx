@@ -5,17 +5,11 @@ import type { Event } from "@/types/event";
 
 interface EventListProps {
   events: Event[];
-  total: number;
   totalPages: number;
   currentPage: number;
 }
 
-export function EventList({
-  events,
-  total,
-  totalPages,
-  currentPage,
-}: EventListProps) {
+export function EventList({ events, totalPages, currentPage }: EventListProps) {
   return (
     <div className="grid gap-6">
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">

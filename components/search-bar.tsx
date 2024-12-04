@@ -35,7 +35,7 @@ export function SearchBar({
     if (currentSearchTerm !== searchTerm) {
       setSearchTerm(currentSearchTerm);
     }
-  }, [searchParams]);
+  }, [searchParams, searchTerm]);
 
   // Handle search when debounced term changes
   React.useEffect(() => {

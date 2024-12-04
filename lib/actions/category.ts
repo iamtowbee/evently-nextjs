@@ -19,7 +19,15 @@ export async function createCategory(name: string, description?: string) {
       });
       return { category };
     },
-    { category: null }
+    {
+      category: {
+        id: "",
+        name: "",
+        description: null,
+        slug: "",
+        createdAt: new Date(),
+      },
+    }
   );
 
   return result.data;
@@ -44,7 +52,9 @@ export async function getCategories() {
 export async function getTopCategories(limit = 5) {
   const result = await withErrorHandling(
     async () => {
-      const categories = await prisma.$queryRaw`
+      const categories = await prisma.$queryRaw<
+        Array<{ id: string; name: string; slug: string }>
+      >`
         SELECT c.*, COUNT(e.id) as event_count
         FROM public.categories c
         LEFT JOIN public.events e ON c.id = e.category_id

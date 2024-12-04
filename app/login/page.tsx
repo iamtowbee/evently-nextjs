@@ -1,7 +1,10 @@
 "use client";
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { signIn } from "next-auth/react";
+import { useSearchParams } from "next/navigation";
+import { FcGoogle } from "react-icons/fc";
+import { FaGithub } from "react-icons/fa";
 import {
   Card,
   CardContent,
@@ -10,23 +13,16 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
-import { signIn } from "next-auth/react";
-import { FcGoogle } from "react-icons/fc";
-import { FaGithub } from "react-icons/fa";
+import { Button } from "@/components/ui/button";
+import { Suspense } from "react";
 
-export default function LoginPage() {
-  const router = useRouter();
+function LoginContent() {
   const searchParams = useSearchParams();
-  const [isLoading, setIsLoading] = React.useState<boolean>(false);
+  const [isLoading, setIsLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(
     searchParams.get("error") === "OAuthAccountNotLinked"
       ? "An account already exists with this email address. Please sign in with the original provider."
       : searchParams.get("error")
-  );
-  const [message, setMessage] = React.useState<string | null>(
-    searchParams.get("message")
   );
 
   const callbackUrl = searchParams.get("callbackUrl") || "/";
@@ -40,6 +36,7 @@ export default function LoginPage() {
       });
     } catch (error) {
       setError("Something went wrong. Please try again.");
+      console.error("Sign in error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -49,8 +46,8 @@ export default function LoginPage() {
     <div className="container flex h-screen w-screen flex-col items-center justify-center">
       <Card className="w-full max-w-lg">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl">Sign in</CardTitle>
-          <CardDescription>
+          <CardTitle className="text-2xl text-center">Welcome back</CardTitle>
+          <CardDescription className="text-center">
             Choose your preferred sign in method
           </CardDescription>
         </CardHeader>
@@ -60,24 +57,19 @@ export default function LoginPage() {
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
-          {message && (
-            <Alert>
-              <AlertDescription>{message}</AlertDescription>
-            </Alert>
-          )}
-          <div className="grid gap-2">
+          <div className="grid gap-6">
             <Button
               variant="outline"
-              onClick={() => handleSignIn("github")}
               disabled={isLoading}
+              onClick={() => handleSignIn("github")}
             >
               <FaGithub className="mr-2 h-4 w-4" />
               Continue with GitHub
             </Button>
             <Button
               variant="outline"
-              onClick={() => handleSignIn("google")}
               disabled={isLoading}
+              onClick={() => handleSignIn("google")}
             >
               <FcGoogle className="mr-2 h-4 w-4" />
               Continue with Google
@@ -86,5 +78,13 @@ export default function LoginPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -12,8 +12,15 @@ export const ourFileRouter = {
 
       return { userId: session.user.id };
     })
-    .onUploadComplete(async ({ metadata, file }) => {
+    .onUploadComplete(async ({ file }) => {
       return { fileUrl: file.url, fileKey: file.key };
+    }),
+  imageUploader: f({ image: { maxFileSize: "4MB" } })
+    .middleware(async () => {
+      return { userId: "test" };
+    })
+    .onUploadComplete(async ({ file }) => {
+      console.log("Upload complete for userId:", file.url);
     }),
 } satisfies FileRouter;
 

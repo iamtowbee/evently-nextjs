@@ -1,8 +1,8 @@
 "use client";
 
 import * as React from "react";
-import { LogIn, LogOut, User } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import Link from "next/link";
+import { signOut, useSession } from "next-auth/react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,14 +10,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { cn } from "@/lib/utils";
-import { signOut, useSession } from "next-auth/react";
+import { LogIn, LogOut, User } from "lucide-react";
 
 export function AuthButton() {
-  const router = useRouter();
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = React.useState(false);
 

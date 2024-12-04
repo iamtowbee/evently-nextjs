@@ -18,11 +18,13 @@ async function getNavCategories(): Promise<Category[]> {
   const result = await getTopCategories(5);
   if (!result?.categories) return [];
 
-  return (result.categories as any[]).map((category) => ({
-    id: category.id,
-    name: category.name,
-    slug: category.slug,
-  }));
+  return (result.categories || []).map(
+    (category: { id: string; name: string; slug: string }) => ({
+      id: category.id,
+      name: category.name,
+      slug: category.slug,
+    })
+  );
 }
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

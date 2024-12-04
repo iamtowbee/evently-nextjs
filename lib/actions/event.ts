@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import type { Event } from "@/types/event";
+import type { EventActionResult } from "@/types/event";
 import { slugify, withErrorHandling } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 
@@ -12,6 +12,7 @@ export type GetEventsParams = {
   limit?: number;
   page?: number;
   sort?: string;
+  featured?: boolean;
 };
 
 export async function getEvents({
@@ -20,6 +21,7 @@ export async function getEvents({
   limit = 6,
   page = 1,
   sort = "date",
+  featured = false,
 }: GetEventsParams = {}) {
   const skip = (page - 1) * limit;
 
@@ -34,6 +36,10 @@ export async function getEvents({
       { name: { contains: query, mode: "insensitive" } },
       { description: { contains: query, mode: "insensitive" } },
     ];
+  }
+
+  if (featured) {
+    where.is_featured = true;
   }
 
   const result = await withErrorHandling(
@@ -52,6 +58,8 @@ export async function getEvents({
                 id: true,
                 name: true,
                 slug: true,
+                description: true,
+                createdAt: true,
               },
             },
             organizer: {
@@ -134,7 +142,7 @@ export async function createEvent(data: {
   status: "draft" | "published";
   imageUrl?: string;
 }) {
-  const result = await withErrorHandling(
+  const result = await withErrorHandling<EventActionResult>(
     async () => {
       const event = await prisma.event.create({
         data: {
@@ -164,16 +172,16 @@ export async function createEvent(data: {
         },
       });
 
-      return { success: true as const, event };
+      return { success: true, event };
     },
-    { success: false as const, error: "Failed to create event" }
+    { success: false, event: null, error: "Failed to create event" }
   );
 
   return result.data;
 }
 
 export async function registerForEvent(eventId: string, userId: string) {
-  const result = await withErrorHandling(
+  const result = await withErrorHandling<EventActionResult>(
     async () => {
       const event = await prisma.event.update({
         where: { id: eventId },
@@ -189,16 +197,20 @@ export async function registerForEvent(eventId: string, userId: string) {
           attendees: true,
         },
       });
-      return { success: true, event };
+      return { success: true as const, event };
     },
-    { success: false, error: "Failed to register for event" }
+    {
+      success: false as const,
+      event: null,
+      error: "Failed to register for event",
+    }
   );
 
   return result.data;
 }
 
 export async function unregisterFromEvent(eventId: string, userId: string) {
-  const result = await withErrorHandling(
+  const result = await withErrorHandling<EventActionResult>(
     async () => {
       const event = await prisma.event.update({
         where: { id: eventId },
@@ -214,9 +226,13 @@ export async function unregisterFromEvent(eventId: string, userId: string) {
           attendees: true,
         },
       });
-      return { success: true, event };
+      return { success: true as const, event };
     },
-    { success: false, error: "Failed to unregister from event" }
+    {
+      success: false as const,
+      event: null,
+      error: "Failed to unregister from event",
+    }
   );
 
   return result.data;
