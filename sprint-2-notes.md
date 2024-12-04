@@ -3,7 +3,7 @@ Absolutely! We have a great foundation with Prisma, Auth.js, and our UI componen
 [INSTRUCTIONS]
 - We use shadcn components to build our design system
 - Do not make any drastic, breaking changes without checking with the human agent
-- We use pnpm as our preferred package manager
+- We use yarn as our preferred package manager
 - When in doubt, check the codebase to get more context on exising implementations
 
 Let's plan Sprint 2 focusing on event mutations:
