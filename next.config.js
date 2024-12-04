@@ -24,6 +24,22 @@ const nextConfig = {
       },
     ],
   },
+  typescript: {
+    // Handle type errors during build
+    ignoreBuildErrors: false,
+  },
+  // Enable strict mode for better development experience
+  reactStrictMode: true,
+  // Automatically inline small images as base64
+  experimental: {
+    optimizePackageImports: ["@radix-ui/react-icons", "lucide-react"],
+  },
+  // Increase the allowed image size if needed
+  images: {
+    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
+    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
+    formats: ["image/webp"],
+  },
 };
 
 module.exports = nextConfig;
