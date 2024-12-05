@@ -106,6 +106,12 @@ model Event {
   organizer     User?      @relation("Organizer", fields: [organizer_id], references: [id])
   attendees     User[]     @relation("Attendees")
 
+  @@index([date])
+  @@index([is_featured])
+  @@index([category_id])
+  @@index([organizer_id])
+  @@index([name])
+
   @@map("events")
   @@schema("public")
 }
