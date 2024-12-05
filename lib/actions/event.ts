@@ -5,61 +5,79 @@ import { prisma } from "@/lib/prisma";
 import type { EventActionResult } from "@/types/event";
 import { slugify, withErrorHandling } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
+import { cache } from "react";
 
 export type GetEventsParams = {
   query?: string;
   category?: string;
   limit?: number;
-  page?: number;
+  cursor?: string;
   sort?: string;
   featured?: boolean;
 };
 
-export async function getEvents({
-  query,
-  category,
-  limit = 6,
-  page = 1,
-  sort = "date",
-  featured = false,
-}: GetEventsParams = {}) {
-  const skip = (page - 1) * limit;
+export const getEvents = cache(
+  async ({
+    query,
+    category,
+    limit = 6,
+    cursor,
+    sort = "date",
+    featured = false,
+  }: GetEventsParams = {}) => {
+    const where: Prisma.EventWhereInput = {};
 
-  const where: Prisma.EventWhereInput = {};
+    if (category) {
+      where.category = { slug: category };
+    }
 
-  if (category) {
-    where.category = { slug: category };
-  }
+    if (query) {
+      where.OR = [
+        { name: { contains: query, mode: "insensitive" } },
+        { description: { contains: query, mode: "insensitive" } },
+      ];
+    }
 
-  if (query) {
-    where.OR = [
-      { name: { contains: query, mode: "insensitive" } },
-      { description: { contains: query, mode: "insensitive" } },
-    ];
-  }
+    if (featured) {
+      where.is_featured = true;
+    }
 
-  if (featured) {
-    where.is_featured = true;
-  }
-
-  const result = await withErrorHandling(
-    async () => {
-      const [events, total] = await Promise.all([
-        prisma.event.findMany({
+    const result = await withErrorHandling(
+      async () => {
+        const events = await prisma.event.findMany({
           where,
-          take: limit,
-          skip,
+          take: limit + 1, // Take one more to check if there are more items
+          ...(cursor
+            ? {
+                cursor: {
+                  id: cursor,
+                },
+                skip: 1, // Skip the cursor
+              }
+            : {}),
           orderBy: {
             [sort]: "desc",
           },
-          include: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+            location: true,
+            venue: true,
+            date: true,
+            start_time: true,
+            end_time: true,
+            image_url: true,
+            is_featured: true,
+            is_free: true,
+            price: true,
+            attendee_count: true,
             category: {
               select: {
                 id: true,
                 name: true,
                 slug: true,
-                description: true,
-                createdAt: true,
               },
             },
             organizer: {
@@ -74,28 +92,58 @@ export async function getEvents({
               },
             },
           },
-        }),
-        prisma.event.count({ where }),
-      ]);
+        });
 
-      return {
-        events,
-        total,
-        pages: Math.ceil(total / limit),
-      };
-    },
-    { events: [], total: 0, pages: 0 }
-  );
+        let nextCursor: string | undefined = undefined;
+        if (events.length > limit) {
+          const nextItem = events.pop(); // Remove the extra item
+          nextCursor = nextItem!.id; // Set the cursor to the last item's id
+        }
 
-  return result.data;
-}
+        const [total] = await prisma.$transaction([
+          prisma.event.count({ where }),
+        ]);
 
-export async function getEventBySlug(slug: string) {
+        return {
+          events,
+          nextCursor,
+          total,
+        };
+      },
+      { events: [], total: 0, nextCursor: undefined }
+    );
+
+    return result.data;
+  }
+);
+
+export const getEventBySlug = cache(async (slug: string) => {
   const result = await withErrorHandling(async () => {
     const event = await prisma.event.findUnique({
       where: { slug },
-      include: {
-        category: true,
+      select: {
+        id: true,
+        name: true,
+        slug: true,
+        description: true,
+        location: true,
+        venue: true,
+        date: true,
+        start_time: true,
+        end_time: true,
+        image_url: true,
+        is_featured: true,
+        is_free: true,
+        price: true,
+        attendee_count: true,
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+            description: true,
+          },
+        },
         organizer: {
           select: {
             id: true,
@@ -104,6 +152,7 @@ export async function getEventBySlug(slug: string) {
           },
         },
         attendees: {
+          take: 5,
           select: {
             id: true,
             name: true,
@@ -126,7 +175,7 @@ export async function getEventBySlug(slug: string) {
   }, null);
 
   return result;
-}
+});
 
 export async function createEvent(data: {
   name: string;
