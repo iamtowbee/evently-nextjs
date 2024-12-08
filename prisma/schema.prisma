@@ -102,6 +102,7 @@ model Event {
   attendee_count Int       @default(0)
   category_id   String?
   organizer_id  String?
+  tags          String[]   @default([])
   category      Category?  @relation(fields: [category_id], references: [id])
   organizer     User?      @relation("Organizer", fields: [organizer_id], references: [id])
   attendees     User[]     @relation("Attendees")
@@ -111,6 +112,7 @@ model Event {
   @@index([category_id])
   @@index([organizer_id])
   @@index([name])
+  @@index([tags])
 
   @@map("events")
   @@schema("public")

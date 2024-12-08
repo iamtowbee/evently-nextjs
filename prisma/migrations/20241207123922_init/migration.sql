@@ -41,8 +41,9 @@ CREATE TABLE "public"."users" (
     "id" TEXT NOT NULL,
     "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updated_at" TIMESTAMP(3) NOT NULL,
-    "email" TEXT NOT NULL,
     "name" TEXT,
+    "email" TEXT NOT NULL,
+    "email_verified" TIMESTAMP(3),
     "image" TEXT,
     "role" TEXT NOT NULL DEFAULT 'user',
 
@@ -81,6 +82,7 @@ CREATE TABLE "public"."events" (
     "attendee_count" INTEGER NOT NULL DEFAULT 0,
     "category_id" TEXT,
     "organizer_id" TEXT,
+    "tags" TEXT[] DEFAULT ARRAY[]::TEXT[],
 
     CONSTRAINT "events_pkey" PRIMARY KEY ("id")
 );
@@ -131,6 +133,24 @@ CREATE UNIQUE INDEX "categories_slug_key" ON "public"."categories"("slug");
 CREATE UNIQUE INDEX "events_slug_key" ON "public"."events"("slug");
 
 -- CreateIndex
+CREATE INDEX "events_date_idx" ON "public"."events"("date");
+
+-- CreateIndex
+CREATE INDEX "events_is_featured_idx" ON "public"."events"("is_featured");
+
+-- CreateIndex
+CREATE INDEX "events_category_id_idx" ON "public"."events"("category_id");
+
+-- CreateIndex
+CREATE INDEX "events_organizer_id_idx" ON "public"."events"("organizer_id");
+
+-- CreateIndex
+CREATE INDEX "events_name_idx" ON "public"."events"("name");
+
+-- CreateIndex
+CREATE INDEX "events_tags_idx" ON "public"."events"("tags");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "virtual_events_event_id_key" ON "public"."virtual_events"("event_id");
 
 -- CreateIndex
@@ -153,13 +173,3 @@ ALTER TABLE "public"."_Attendees" ADD CONSTRAINT "_Attendees_A_fkey" FOREIGN KEY
 
 -- AddForeignKey
 ALTER TABLE "public"."_Attendees" ADD CONSTRAINT "_Attendees_B_fkey" FOREIGN KEY ("B") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-
--- Insert initial categories with the desired IDs
-INSERT INTO "public"."categories" (id, name, slug, description, created_at)
-VALUES 
-  ('tech-talks', 'Tech Talks', 'tech-talks', 'Technology and innovation events', CURRENT_TIMESTAMP),
-  ('business', 'Business', 'business', 'Business and entrepreneurship events', CURRENT_TIMESTAMP),
-  ('design', 'Design', 'design', 'Design and creative events', CURRENT_TIMESTAMP),
-  ('health-wellness', 'Health & Wellness', 'health-wellness', 'Health and wellness events', CURRENT_TIMESTAMP),
-  ('education', 'Education', 'education', 'Educational events and workshops', CURRENT_TIMESTAMP)
-ON CONFLICT (id) DO NOTHING;
