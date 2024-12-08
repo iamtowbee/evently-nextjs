@@ -10,10 +10,32 @@ import {
   CardHeader,
 } from "@/components/ui/card";
 import { cn, getImageUrl } from "@/lib/utils";
-import type { Event } from "@/types/event";
 
 interface EventCardProps {
-  event: Event;
+  event: {
+    id: string;
+    name: string;
+    slug: string;
+    description: string | null;
+    location: string | null;
+    venue: string | null;
+    date: Date;
+    start_time: string;
+    end_time: string;
+    image_url: string | null;
+    is_featured: boolean;
+    is_free: boolean;
+    price: number | null;
+    attendee_count: number;
+    category: {
+      id: string;
+      name: string;
+      slug: string;
+    } | null;
+    _count?: {
+      attendees: number;
+    };
+  };
   className?: string;
 }
 
@@ -70,7 +92,7 @@ export function EventCard({ event, className }: EventCardProps) {
           <div className="flex items-center gap-2">
             <Calendar className="h-4 w-4 shrink-0" />
             <time dateTime={event.date.toISOString()} className="line-clamp-1">
-              {format(event.date, "EEE, MMM d, yyyy")}
+              {format(new Date(event.date), "EEE, MMM d, yyyy")}
             </time>
           </div>
           <div className="flex items-center gap-2">
@@ -100,7 +122,7 @@ export function EventCard({ event, className }: EventCardProps) {
             </Link>
           )}
           <div className="text-sm text-muted-foreground">
-            {event._count?.attendees || 0} attending
+            {event._count?.attendees || event.attendee_count} attending
           </div>
         </div>
       </CardFooter>
