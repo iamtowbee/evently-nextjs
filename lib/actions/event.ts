@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import type { EventActionResult } from "@/types/event";
+import type { Event, EventActionResult } from "@/types/event";
 import { slugify, withErrorHandling } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -14,6 +14,11 @@ export type GetEventsParams = {
   cursor?: string;
   sort?: string;
   featured?: boolean;
+  date?: Date;
+  location?: string;
+  minPrice?: number;
+  maxPrice?: number;
+  onlyFreeEvents?: boolean;
 };
 
 export const getEvents = cache(
@@ -24,6 +29,11 @@ export const getEvents = cache(
     cursor,
     sort = "date",
     featured = false,
+    date,
+    location,
+    minPrice,
+    maxPrice,
+    onlyFreeEvents,
   }: GetEventsParams = {}) => {
     const where: Prisma.EventWhereInput = {};
 
@@ -42,17 +52,68 @@ export const getEvents = cache(
       where.is_featured = true;
     }
 
+    if (date) {
+      where.date = {
+        gte: new Date(date.setHours(0, 0, 0, 0)),
+        lt: new Date(date.setHours(23, 59, 59, 999)),
+      };
+    }
+
+    if (location) {
+      where.OR = [
+        ...(where.OR || []),
+        { location: { contains: location, mode: "insensitive" } },
+        { venue: { contains: location, mode: "insensitive" } },
+      ];
+    }
+
+    if (onlyFreeEvents) {
+      where.is_free = true;
+    } else if (minPrice !== undefined || maxPrice !== undefined) {
+      where.AND = {
+        AND: [
+          {
+            OR: [
+              { is_free: false },
+              {
+                AND: [
+                  { price: { gte: minPrice } },
+                  { price: { lte: maxPrice } },
+                ],
+              },
+            ],
+          },
+        ],
+      };
+    }
+
     const result = await withErrorHandling(
       async () => {
+        // First, get total count
+        const total = await prisma.event.count({ where });
+
+        // If there are no events or cursor is beyond total, return empty result
+        if (
+          total === 0 ||
+          (cursor &&
+            !(await prisma.event.findUnique({ where: { id: cursor } })))
+        ) {
+          return {
+            events: [],
+            nextCursor: undefined,
+            total: 0,
+          };
+        }
+
+        // Fetch events with pagination
         const events = await prisma.event.findMany({
           where,
-          take: limit + 1, // Take one more to check if there are more items
+          take: limit + 1,
           ...(cursor
             ? {
                 cursor: {
                   id: cursor,
                 },
-                skip: 1, // Skip the cursor
               }
             : {}),
           orderBy: {
@@ -95,14 +156,12 @@ export const getEvents = cache(
         });
 
         let nextCursor: string | undefined = undefined;
+
+        // Only set nextCursor if we have more items
         if (events.length > limit) {
           const nextItem = events.pop(); // Remove the extra item
-          nextCursor = nextItem!.id; // Set the cursor to the last item's id
+          nextCursor = nextItem!.id;
         }
-
-        const [total] = await prisma.$transaction([
-          prisma.event.count({ where }),
-        ]);
 
         return {
           events,
@@ -118,45 +177,21 @@ export const getEvents = cache(
 );
 
 export const getEventBySlug = cache(async (slug: string) => {
-  const result = await withErrorHandling(async () => {
-    const event = await prisma.event.findUnique({
+  try {
+    const event = await prisma.event.findFirst({
       where: { slug },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        description: true,
-        location: true,
-        venue: true,
-        date: true,
-        start_time: true,
-        end_time: true,
-        image_url: true,
-        is_featured: true,
-        is_free: true,
-        price: true,
-        attendee_count: true,
+      include: {
         category: {
           select: {
             id: true,
             name: true,
             slug: true,
-            description: true,
           },
         },
         organizer: {
           select: {
             id: true,
             name: true,
-            image: true,
-          },
-        },
-        attendees: {
-          take: 5,
-          select: {
-            id: true,
-            name: true,
-            image: true,
           },
         },
         _count: {
@@ -167,14 +202,26 @@ export const getEventBySlug = cache(async (slug: string) => {
       },
     });
 
-    if (!event) {
-      throw new Error("Event not found");
+    return { data: event, error: null };
+  } catch (error) {
+    // Check if it's a connection error
+    if (
+      error instanceof Error &&
+      (error.message.includes("connect") ||
+        error.message.includes("network") ||
+        error.message.includes("ECONNREFUSED"))
+    ) {
+      return {
+        data: null,
+        error:
+          "Connection error: Please check your internet connection and try again.",
+      };
     }
-
-    return event;
-  }, null);
-
-  return result;
+    return {
+      data: null,
+      error: "Failed to load event details. Please try again.",
+    };
+  }
 });
 
 export async function createEvent(data: {
@@ -286,3 +333,61 @@ export async function unregisterFromEvent(eventId: string, userId: string) {
 
   return result.data;
 }
+
+export const getSimilarEvents = cache(async (eventId: string, limit = 3) => {
+  const result = await withErrorHandling(async () => {
+    try {
+      const event = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { category_id: true },
+      });
+
+      if (!event) return [];
+
+      const similarEvents = await prisma.event.findMany({
+        where: {
+          category_id: event.category_id,
+          id: { not: eventId },
+        },
+        take: limit,
+        include: {
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
+          organizer: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+          _count: {
+            select: {
+              attendees: true,
+            },
+          },
+        },
+      });
+
+      return similarEvents;
+    } catch (error) {
+      // Check if it's a connection error
+      if (
+        error instanceof Error &&
+        (error.message.includes("connect") ||
+          error.message.includes("network") ||
+          error.message.includes("ECONNREFUSED"))
+      ) {
+        throw new Error(
+          "Connection error: Please check your internet connection and try again."
+        );
+      }
+      throw error;
+    }
+  }, []);
+
+  return result.data;
+});

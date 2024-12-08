@@ -18,16 +18,16 @@ export interface Event {
   attendee_count: number;
   category_id: string | null;
   organizer_id: string | null;
+  tags?: string[];
   category?: {
     id: string;
     name: string;
     slug: string;
-    description: string | null;
-    createdAt: Date;
   } | null;
   organizer?: {
     id: string;
     name: string | null;
+    image?: string | null;
   } | null;
   _count?: {
     attendees: number;
@@ -47,5 +47,5 @@ export type EventResponse = {
 };
 
 export type EventActionResult =
-  | { success: true; event: Event }
+  | { success: true; event: Event | null; message?: string }
   | { success: false; event: null; error: string };
