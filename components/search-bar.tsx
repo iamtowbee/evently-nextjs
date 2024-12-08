@@ -60,6 +60,19 @@ export function SearchBar({
     setSearchTerm("");
   };
 
+  // Handle filter changes
+  const handleFilterChange = (filters: Partial<FilterState>) => {
+    onFilterChange({
+      searchTerm: debouncedSearchTerm,
+      category: "",
+      date: undefined,
+      location: "",
+      priceRange: [0, 1000],
+      onlyFreeEvents: false,
+      ...filters,
+    });
+  };
+
   return (
     <Card>
       <CardContent className="p-3">
@@ -103,7 +116,7 @@ export function SearchBar({
             <SlidersHorizontal className="h-4 w-4" />
           </Button>
         </div>
-        {showFilters && <FilterOptions onChange={onFilterChange} />}
+        {showFilters && <FilterOptions onChange={handleFilterChange} />}
       </CardContent>
     </Card>
   );

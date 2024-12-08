@@ -2,7 +2,7 @@
 
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
-import type { Event, EventActionResult } from "@/types/event";
+import type { EventActionResult } from "@/types/event";
 import { slugify, withErrorHandling } from "@/lib/utils";
 import { Prisma } from "@prisma/client";
 import { cache } from "react";
@@ -121,6 +121,8 @@ export const getEvents = cache(
           },
           select: {
             id: true,
+            created_at: true,
+            updated_at: true,
             name: true,
             slug: true,
             description: true,
@@ -133,6 +135,9 @@ export const getEvents = cache(
             is_featured: true,
             is_free: true,
             price: true,
+            max_attendees: true,
+            category_id: true,
+            organizer_id: true,
             attendee_count: true,
             category: {
               select: {
@@ -291,6 +296,13 @@ export async function registerForEvent(eventId: string, userId: string) {
         },
         include: {
           attendees: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
         },
       });
       return { success: true as const, event };
@@ -320,6 +332,13 @@ export async function unregisterFromEvent(eventId: string, userId: string) {
         },
         include: {
           attendees: true,
+          category: {
+            select: {
+              id: true,
+              name: true,
+              slug: true,
+            },
+          },
         },
       });
       return { success: true as const, event };
@@ -335,59 +354,34 @@ export async function unregisterFromEvent(eventId: string, userId: string) {
 }
 
 export const getSimilarEvents = cache(async (eventId: string, limit = 3) => {
-  const result = await withErrorHandling(async () => {
-    try {
-      const event = await prisma.event.findUnique({
-        where: { id: eventId },
-        select: { category_id: true },
-      });
+  try {
+    const event = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { category_id: true },
+    });
 
-      if (!event) return [];
+    if (!event) return [];
 
-      const similarEvents = await prisma.event.findMany({
-        where: {
-          category_id: event.category_id,
-          id: { not: eventId },
-        },
-        take: limit,
-        include: {
-          category: {
-            select: {
-              id: true,
-              name: true,
-              slug: true,
-            },
-          },
-          organizer: {
-            select: {
-              id: true,
-              name: true,
-            },
-          },
-          _count: {
-            select: {
-              attendees: true,
-            },
+    const similarEvents = await prisma.event.findMany({
+      where: {
+        category_id: event.category_id,
+        id: { not: eventId },
+      },
+      take: limit,
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
           },
         },
-      });
+      },
+    });
 
-      return similarEvents;
-    } catch (error) {
-      // Check if it's a connection error
-      if (
-        error instanceof Error &&
-        (error.message.includes("connect") ||
-          error.message.includes("network") ||
-          error.message.includes("ECONNREFUSED"))
-      ) {
-        throw new Error(
-          "Connection error: Please check your internet connection and try again."
-        );
-      }
-      throw error;
-    }
-  }, []);
-
-  return result.data;
+    return similarEvents;
+  } catch (error) {
+    console.error("Failed to fetch similar events:", error);
+    return [];
+  }
 });

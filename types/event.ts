@@ -19,7 +19,7 @@ export interface Event {
   category_id: string | null;
   organizer_id: string | null;
   tags?: string[];
-  category?: {
+  category: {
     id: string;
     name: string;
     slug: string;

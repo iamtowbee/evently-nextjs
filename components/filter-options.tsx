@@ -8,6 +8,7 @@ import {
   FormField,
   FormItem,
   FormLabel,
+  FormDescription,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import {
@@ -21,16 +22,21 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { FilterState } from "@/types/filters";
+import { Switch } from "@/components/ui/switch";
+import { Slider } from "@/components/ui/slider";
+import { cn } from "@/lib/utils";
 
 const formSchema = z.object({
   location: z.string().optional(),
   eventType: z.string().optional(),
   dateRange: z.date().optional(),
   sortBy: z.string().optional(),
+  priceRange: z.array(z.number()).length(2).optional(),
+  onlyFreeEvents: z.boolean().optional(),
 });
 
 interface FilterOptionsProps {
-  onChange: (filters: FilterState) => void;
+  onChange: (filters: Partial<FilterState>) => void;
 }
 
 export function FilterOptions({ onChange }: FilterOptionsProps) {
@@ -40,13 +46,19 @@ export function FilterOptions({ onChange }: FilterOptionsProps) {
       location: "",
       eventType: "",
       sortBy: "newest",
+      priceRange: [0, 1000],
+      onlyFreeEvents: false,
     },
   });
 
   // Watch form values and call onChange
   React.useEffect(() => {
     const subscription = form.watch((value) => {
-      onChange(value as FilterState);
+      onChange({
+        ...value,
+        date: value.dateRange,
+        priceRange: value.onlyFreeEvents ? [0, 0] : value.priceRange,
+      } as FilterState);
     });
     return () => subscription.unsubscribe();
   }, [form, onChange]);
@@ -121,14 +133,62 @@ export function FilterOptions({ onChange }: FilterOptionsProps) {
           control={form.control}
           name="dateRange"
           render={({ field }) => (
-            <FormItem>
+            <FormItem className="flex flex-col space-y-2">
               <FormLabel>Date</FormLabel>
-              <FormControl>
+              <div className="-mx-2 bg-muted rounded-md">
                 <Calendar
                   mode="single"
                   selected={field.value}
                   onSelect={field.onChange}
-                  className="rounded-md border bg-muted"
+                  initialFocus
+                />
+              </div>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="onlyFreeEvents"
+          render={({ field }) => (
+            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+              <div className="space-y-0.5">
+                <FormLabel>Free Events Only</FormLabel>
+                <FormDescription>Show only free events</FormDescription>
+              </div>
+              <FormControl>
+                <Switch
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              </FormControl>
+            </FormItem>
+          )}
+        />
+
+        <FormField
+          control={form.control}
+          name="priceRange"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Price Range</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormDescription>
+                  ${field.value?.[0] || 0} - ${field.value?.[1] || 1000}
+                </FormDescription>
+              </div>
+              <FormControl>
+                <Slider
+                  min={0}
+                  max={1000}
+                  step={10}
+                  value={field.value || [0, 1000]}
+                  onValueChange={field.onChange}
+                  disabled={form.watch("onlyFreeEvents")}
+                  className={cn(
+                    "pt-2",
+                    form.watch("onlyFreeEvents") && "opacity-50"
+                  )}
                 />
               </FormControl>
             </FormItem>

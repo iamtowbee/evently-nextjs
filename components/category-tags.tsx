@@ -2,12 +2,7 @@ import * as React from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-
-interface Category {
-  id: string;
-  name: string;
-  slug: string;
-}
+import type { Category } from "@/types/category";
 
 interface CategoryTagsProps {
   categories: Category[];
@@ -20,6 +15,12 @@ export function CategoryTags({
   selectedCategory,
   onSelectCategory,
 }: CategoryTagsProps) {
+  // Find the selected category by slug
+  const selectedCategoryId = React.useMemo(() => {
+    if (!selectedCategory) return undefined;
+    return categories.find((cat) => cat.slug === selectedCategory)?.id;
+  }, [categories, selectedCategory]);
+
   return (
     <div className="w-full">
       <ScrollArea className="w-full whitespace-nowrap">
@@ -44,7 +45,7 @@ export function CategoryTags({
               size="sm"
               className={cn(
                 "transition-all",
-                selectedCategory === category.id
+                selectedCategoryId === category.id
                   ? "border-primary bg-primary/10 text-primary"
                   : "bg-background hover:text-primary hover:border-primary hover:bg-muted"
               )}
