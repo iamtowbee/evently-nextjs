@@ -242,9 +242,13 @@ export async function createEvent(data: {
   maxAttendees?: number;
   status: "draft" | "published";
   imageUrl?: string;
+  eventType: "in-person" | "virtual" | "hybrid";
+  url?: string;
+  organizerId: string;
 }) {
   const result = await withErrorHandling<EventActionResult>(
     async () => {
+      // Create the main event
       const event = await prisma.event.create({
         data: {
           name: data.name,
@@ -262,9 +266,13 @@ export async function createEvent(data: {
           category: {
             connect: { id: data.categoryId },
           },
+          organizer: {
+            connect: { id: data.organizerId },
+          },
         },
         include: {
           category: true,
+          organizer: true,
           _count: {
             select: {
               attendees: true,
@@ -272,6 +280,21 @@ export async function createEvent(data: {
           },
         },
       });
+
+      // If it's a virtual or hybrid event, create the virtual event details
+      if (data.eventType === "virtual" || data.eventType === "hybrid") {
+        if (!data.url) {
+          throw new Error("URL is required for virtual events");
+        }
+
+        await prisma.virtualEvent.create({
+          data: {
+            eventId: event.id,
+            platform: "other", // You can make this configurable if needed
+            url: data.url,
+          },
+        });
+      }
 
       return { success: true, event };
     },

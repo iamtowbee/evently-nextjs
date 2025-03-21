@@ -27,6 +27,8 @@ export function Navbar({ categories = [] }: NavbarProps) {
   const { data: session, status } = useSession();
   const [isLoading, setIsLoading] = React.useState(false);
 
+  // console.log("Sign in status", status);
+
   const handleSignOut = React.useCallback(async () => {
     try {
       setIsLoading(true);

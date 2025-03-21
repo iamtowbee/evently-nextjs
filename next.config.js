@@ -34,9 +34,6 @@ const nextConfig = {
   experimental: {
     optimizePackageImports: ["@radix-ui/react-icons", "lucide-react"],
   },
-  env: {
-    AUTH_TRUST_HOST: true,
-  },
   async headers() {
     return [
       {

@@ -1,13 +1,11 @@
 generator client {
   provider = "prisma-client-js"
-  previewFeatures = ["multiSchema"]
 }
 
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
-  schemas   = ["public", "auth"]
 }
 
 model Account {
@@ -28,7 +26,6 @@ model Account {
 
   @@unique([provider, providerAccountId])
   @@map("accounts")
-  @@schema("auth")
 }
 
 model Session {
@@ -39,7 +36,23 @@ model Session {
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("sessions")
-  @@schema("auth")
+}
+
+model User {
+  id            String    @id @default(cuid())
+  created_at    DateTime  @default(now())
+  updated_at    DateTime  @updatedAt
+  name          String?
+  email         String?   @unique
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  role          String    @default("user")
+  accounts      Account[]
+  sessions      Session[]
+  events        Event[]   @relation("Organizer")
+  attending     Event[]   @relation("Attendees")
+
+  @@map("users")
 }
 
 model VerificationToken {
@@ -49,25 +62,6 @@ model VerificationToken {
 
   @@unique([identifier, token])
   @@map("verification_tokens")
-  @@schema("auth")
-}
-
-model User {
-  id            String    @id @default(cuid())
-  created_at    DateTime  @default(now())
-  updated_at    DateTime  @updatedAt
-  name          String?
-  email         String    @unique
-  emailVerified DateTime? @map("email_verified")
-  image         String?
-  role          String    @default("user")
-  events        Event[]   @relation("Organizer")
-  attending     Event[]   @relation("Attendees")
-  accounts      Account[]
-  sessions      Session[]
-
-  @@map("users")
-  @@schema("public")
 }
 
 model Category {
@@ -79,7 +73,6 @@ model Category {
   events      Event[]
 
   @@map("categories")
-  @@schema("public")
 }
 
 model Event {
@@ -115,7 +108,6 @@ model Event {
   @@index([tags])
 
   @@map("events")
-  @@schema("public")
 }
 
 model VirtualEvent {
@@ -128,5 +120,4 @@ model VirtualEvent {
   passcode   String?
 
   @@map("virtual_events")
-  @@schema("public")
-} 
+}

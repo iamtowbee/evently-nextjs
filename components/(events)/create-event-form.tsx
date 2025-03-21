@@ -4,8 +4,8 @@ import * as React from "react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import * as z from "zod";
-import { CalendarIcon, Globe, MapPin } from "lucide-react";
-import { format, parse, isAfter } from "date-fns";
+import { CalendarCog, CalendarIcon, Globe, MapPin, Rss } from "lucide-react";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -39,96 +39,70 @@ import { createEvent } from "@/lib/actions/event";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { UploadButton } from "@/components/ui/upload-button";
-import { CategorySelect } from "@/components/category-select";
-import { useSession } from "next-auth/react";
+import { CategorySelect } from "@/components/(categories)/category-select";
 
 const EVENT_TYPES = [
   {
     id: "in-person",
-    label: "In Person",
-    description: "Event will be held at a physical location",
+    label: "Physical",
+    description: "Event holds at a physical location",
     icon: MapPin,
   },
   {
     id: "virtual",
     label: "Virtual",
-    description: "Event will be held online",
-    icon: Globe,
+    description: "Event holds online",
+    icon: Rss,
   },
   {
     id: "hybrid",
     label: "Hybrid",
-    description: "Event will be held both online and at a physical location",
-    icon: Globe,
+    description: "Event holds online and onsite",
+    icon: CalendarCog,
   },
 ] as const;
 
-const formSchema = z
-  .object({
-    name: z.string().min(2, {
-      message: "Event name must be at least 2 characters.",
-    }),
-    description: z.string().min(10, {
-      message: "Description must be at least 10 characters.",
-    }),
-    location: z.string().min(2, {
-      message: "Location must be at least 2 characters.",
-    }),
-    venue: z.string().optional(),
-    event_type: z.enum(["in-person", "virtual", "hybrid"] as const, {
-      required_error: "Please select an event type.",
-    }),
-    url: z.string().url().optional().or(z.literal("")),
-    date: z.date({
-      required_error: "A date is required.",
-    }),
-    start_time: z.string({
-      required_error: "Start time is required.",
-    }),
-    end_time: z.string({
-      required_error: "End time is required.",
-    }),
-    category_id: z.string({
-      required_error: "Please select a category.",
-    }),
-    is_free: z.boolean().default(false),
-    price: z.number().optional(),
-    max_attendees: z.number().int().positive().optional(),
-    image_url: z.string().url().optional(),
-    status: z
-      .enum(["draft", "published"] as const, {
-        required_error: "Please select a status.",
-      })
-      .default("draft"),
-  })
-  .refine(
-    (data) => {
-      if (data.event_type === "virtual" || data.event_type === "hybrid") {
-        return !!data.url;
-      }
-      return true;
-    },
-    {
-      message: "URL is required for virtual events",
-      path: ["url"],
-    }
-  )
-  .refine(
-    (data) => {
-      const startTime = parse(data.start_time, "HH:mm", data.date);
-      const endTime = parse(data.end_time, "HH:mm", data.date);
-      return isAfter(endTime, startTime);
-    },
-    {
-      message: "End time must be after start time",
-      path: ["end_time"],
-    }
-  );
+const formSchema = z.object({
+  name: z.string().min(2, {
+    message: "Event name must be at least 2 characters.",
+  }),
+  description: z.string().min(10, {
+    message: "Description must be at least 10 characters.",
+  }),
+  location: z.string().min(2, {
+    message: "Location must be at least 2 characters.",
+  }),
+  venue: z.string().optional(),
+  event_type: z.enum(["in-person", "virtual", "hybrid"] as const, {
+    required_error: "Please select an event type.",
+  }),
+  url: z.string().url().optional().or(z.literal("")),
+  date: z.date({
+    required_error: "A date is required.",
+  }),
+  start_time: z.string({
+    required_error: "Start time is required.",
+  }),
+  end_time: z.string({
+    required_error: "End time is required.",
+  }),
+  category_id: z.string({
+    required_error: "Please select a category.",
+  }),
+  is_free: z.boolean().default(false),
+  price: z.number().optional(),
+  max_attendees: z.number().int().positive().optional(),
+  image_url: z.string().url().optional(),
+  status: z
+    .enum(["draft", "published"] as const, {
+      required_error: "Please select a status.",
+    })
+    .default("draft"),
+});
 
 export function CreateEventForm() {
   const router = useRouter();
   const { toast } = useToast();
-  const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -151,15 +125,6 @@ export function CreateEventForm() {
   const eventType = form.watch("event_type");
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    if (!session?.user?.id) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "You must be logged in to create an event",
-      });
-      return;
-    }
-
     try {
       setIsSubmitting(true);
 
@@ -185,9 +150,6 @@ export function CreateEventForm() {
         maxAttendees: values.max_attendees,
         status: values.status,
         imageUrl: values.image_url,
-        eventType: values.event_type,
-        url: values.url,
-        organizerId: session.user.id,
       });
 
       if (response?.success) {
@@ -280,7 +242,7 @@ export function CreateEventForm() {
                             <Label
                               htmlFor={type.id}
                               className={cn(
-                                "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground",
+                                "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground relative",
                                 field.value === type.id &&
                                   "border-primary [&:has([data-state=checked])]:border-primary"
                               )}
@@ -290,14 +252,15 @@ export function CreateEventForm() {
                                 id={type.id}
                                 className="sr-only"
                               />
-                              <type.icon className="mb-3 h-6 w-6" />
+
                               <div className="space-y-1 text-center">
-                                <h3 className="font-medium leading-none">
-                                  {type.label}
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                  {type.description}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <type.icon className="text-sm" />
+                                  <h4 className="font-medium leading-none text-left">
+                                    {type.label}
+                                  </h4>
+                                  <p className="text-xs">{type.description}</p>
+                                </div>
                               </div>
                             </Label>
                           </FormControl>
