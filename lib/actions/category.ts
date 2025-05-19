@@ -33,15 +33,35 @@ export async function createCategory(name: string, description?: string) {
   return result.data;
 }
 
-export async function getCategories() {
+export async function getCategories(options?: {
+  includeEventCount?: boolean;
+  includeImage?: boolean;
+}) {
   const result = await withErrorHandling(
     async () => {
       const categories = await prisma.category.findMany({
         orderBy: {
           name: "asc",
         },
+        include: options?.includeEventCount
+          ? {
+              _count: {
+                select: {
+                  events: true,
+                },
+              },
+            }
+          : undefined,
       });
-      return { categories };
+
+      return {
+        categories: categories.map((category) => ({
+          ...category,
+          card_image_url: options?.includeImage
+            ? `/images/categories/${category.slug}.jpg`
+            : undefined,
+        })),
+      };
     },
     { categories: [] }
   );

@@ -77,6 +77,25 @@ export function Navbar({ categories = [] }: NavbarProps) {
                   />
                 </Link>
               ))}
+              <Link
+                href={`/events`}
+                className={cn(
+                  "group relative inline-flex items-center h-16 px-2 pt-2",
+                  "text-sm font-medium text-foreground/80 hover:text-primary",
+                  "border-b-2 border-transparent hover:border-b-[3px] hover:border-primary",
+                  "transition-colors duration-200 overflow-hidden"
+                )}
+              >
+                <span className="relative z-10">All Categories</span>
+                <span
+                  className={cn(
+                    "absolute inset-0 bg-primary/5",
+                    "transform translate-y-full transition-transform duration-300 ease-out",
+                    "group-hover:translate-y-0 group-hover:duration-500 group-hover:ease-out",
+                    "will-change-transform transform-gpu"
+                  )}
+                />
+              </Link>
             </div>
           </div>
 
@@ -167,6 +186,12 @@ export function Navbar({ categories = [] }: NavbarProps) {
                           {category.name}
                         </Link>
                       ))}
+                      <Link
+                        href="/events"
+                        className="text-sm font-medium text-muted-foreground hover:text-primary"
+                      >
+                        All Categories
+                      </Link>
                     </div>
 
                     {status === "authenticated" && (

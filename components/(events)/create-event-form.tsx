@@ -44,21 +44,21 @@ import { CategorySelect } from "@/components/(categories)/category-select";
 const EVENT_TYPES = [
   {
     id: "in-person",
-    label: "Physical",
-    description: "Event holds at a physical location",
+    label: "In Person",
+    description: "Event will be held at a physical location",
     icon: MapPin,
   },
   {
     id: "virtual",
     label: "Virtual",
-    description: "Event holds online",
-    icon: Rss,
+    description: "Event will be held online",
+    icon: Globe,
   },
   {
     id: "hybrid",
     label: "Hybrid",
-    description: "Event holds online and onsite",
-    icon: CalendarCog,
+    description: "Event will be held both online and at a physical location",
+    icon: Globe,
   },
 ] as const;
 
@@ -237,34 +237,29 @@ export function CreateEventForm() {
                       className="grid grid-cols-3 gap-4"
                     >
                       {EVENT_TYPES.map((type) => (
-                        <FormItem key={type.id}>
-                          <FormControl>
-                            <Label
-                              htmlFor={type.id}
-                              className={cn(
-                                "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground relative",
-                                field.value === type.id &&
-                                  "border-primary [&:has([data-state=checked])]:border-primary"
-                              )}
-                            >
-                              <RadioGroupItem
-                                value={type.id}
-                                id={type.id}
-                                className="sr-only"
-                              />
-
-                              <div className="space-y-1 text-center">
-                                <div className="flex items-center gap-2">
-                                  <type.icon className="text-sm" />
-                                  <h4 className="font-medium leading-none text-left">
-                                    {type.label}
-                                  </h4>
-                                  <p className="text-xs">{type.description}</p>
-                                </div>
-                              </div>
-                            </Label>
-                          </FormControl>
-                        </FormItem>
+                        <div key={type.id}>
+                          <RadioGroupItem
+                            value={type.id}
+                            id={type.id}
+                            className="peer sr-only"
+                          />
+                          <Label
+                            htmlFor={type.id}
+                            className={cn(
+                              "flex h-full w-full flex-col items-center justify-center rounded-lg border-2 p-6 hover:border-primary cursor-pointer",
+                              field.value === type.id
+                                ? "border-primary"
+                                : "border-gray-200 dark:border-gray-800"
+                            )}
+                          >
+                            <div className="flex flex-col items-center justify-center text-center">
+                              <type.icon className="mb-4 h-8 w-8" />
+                              <h3 className="text-xl font-bold">
+                                {type.label}
+                              </h3>
+                            </div>
+                          </Label>
+                        </div>
                       ))}
                     </RadioGroup>
                   </FormControl>

@@ -92,12 +92,19 @@ export const getEvents = cache(
         // First, get total count
         const total = await prisma.event.count({ where });
 
+        console.log(
+          `[getEvents] Query with cursor: ${cursor}, found ${total} total matching events`
+        );
+
         // If there are no events or cursor is beyond total, return empty result
         if (
           total === 0 ||
           (cursor &&
             !(await prisma.event.findUnique({ where: { id: cursor } })))
         ) {
+          console.log(
+            `[getEvents] No events found or invalid cursor: ${cursor}`
+          );
           return {
             events: [],
             nextCursor: undefined,
@@ -106,6 +113,11 @@ export const getEvents = cache(
         }
 
         // Fetch events with pagination
+        console.log(
+          `[getEvents] Fetching up to ${limit + 1} events${
+            cursor ? ` after cursor ${cursor}` : ""
+          }`
+        );
         const events = await prisma.event.findMany({
           where,
           take: limit + 1,
@@ -114,6 +126,7 @@ export const getEvents = cache(
                 cursor: {
                   id: cursor,
                 },
+                skip: 1, // Skip the item with the cursor ID
               }
             : {}),
           orderBy: {
@@ -166,6 +179,28 @@ export const getEvents = cache(
         if (events.length > limit) {
           const nextItem = events.pop(); // Remove the extra item
           nextCursor = nextItem!.id;
+          console.log(
+            `[getEvents] Setting nextCursor to ${nextCursor} (events: ${events.length}, limit: ${limit})`
+          );
+        } else {
+          console.log(
+            `[getEvents] No more events to load (events: ${events.length}, limit: ${limit})`
+          );
+
+          // Special handling for the case where we've fetched exactly 'limit' events
+          // Check if there's exactly one more event in the database
+          if (events.length === limit && total > 0) {
+            const remaining = total - (cursor ? 1 : 0) - events.length;
+            console.log(`[getEvents] Remaining events: ${remaining}`);
+
+            // If there's exactly one more event, set the nextCursor to the last event's ID
+            if (remaining === 1) {
+              nextCursor = events[events.length - 1].id;
+              console.log(
+                `[getEvents] Setting cursor for final item: ${nextCursor}`
+              );
+            }
+          }
         }
 
         return {
@@ -304,6 +339,106 @@ export async function createEvent(data: {
   return result.data;
 }
 
+export async function updateEvent(
+  eventId: string,
+  data: {
+    name: string;
+    description: string;
+    location: string;
+    venue: string;
+    startDateTime: string;
+    endDateTime: string;
+    categoryId: string;
+    isFree: boolean;
+    price?: number;
+    maxAttendees?: number;
+    status: "draft" | "published";
+    imageUrl?: string;
+    eventType: "in-person" | "virtual" | "hybrid";
+    url?: string;
+    organizerId: string;
+  }
+) {
+  const result = await withErrorHandling<EventActionResult>(
+    async () => {
+      // First check if the user is the organizer
+      const existingEvent = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: { organizer_id: true },
+      });
+
+      if (!existingEvent) {
+        throw new Error("Event not found");
+      }
+
+      if (existingEvent.organizer_id !== data.organizerId) {
+        throw new Error("You do not have permission to update this event");
+      }
+
+      // Update the main event
+      const event = await prisma.event.update({
+        where: { id: eventId },
+        data: {
+          name: data.name,
+          description: data.description,
+          location: data.location,
+          venue: data.venue,
+          slug: slugify(data.name),
+          date: new Date(data.startDateTime),
+          start_time: format(new Date(data.startDateTime), "HH:mm"),
+          end_time: format(new Date(data.endDateTime), "HH:mm"),
+          is_free: data.isFree,
+          price: data.price,
+          max_attendees: data.maxAttendees,
+          image_url: data.imageUrl,
+          category: {
+            connect: { id: data.categoryId },
+          },
+        },
+        include: {
+          category: true,
+          organizer: true,
+          _count: {
+            select: {
+              attendees: true,
+            },
+          },
+        },
+      });
+
+      // Handle virtual event details
+      if (data.eventType === "virtual" || data.eventType === "hybrid") {
+        if (!data.url) {
+          throw new Error("URL is required for virtual events");
+        }
+
+        // Update or create virtual event details
+        await prisma.virtualEvent.upsert({
+          where: { eventId },
+          create: {
+            eventId,
+            platform: "other",
+            url: data.url,
+          },
+          update: {
+            url: data.url,
+          },
+        });
+      } else {
+        // If event is no longer virtual, remove virtual event details
+        await prisma.virtualEvent.deleteMany({
+          where: { eventId },
+        });
+      }
+
+      return { success: true, event };
+    },
+    { success: false, event: null, error: "Failed to update event" }
+  );
+
+  return result.data;
+}
+
 export async function registerForEvent(eventId: string, userId: string) {
   const result = await withErrorHandling<EventActionResult>(
     async () => {
@@ -408,3 +543,89 @@ export const getSimilarEvents = cache(async (eventId: string, limit = 3) => {
     return [];
   }
 });
+
+export async function deleteEvent(
+  eventId: string,
+  organizerId: string,
+  type: "soft" | "hard" = "soft"
+) {
+  const result = await withErrorHandling<EventActionResult>(
+    async () => {
+      // First check if the user is the organizer
+      const existingEvent = await prisma.event.findUnique({
+        where: { id: eventId },
+        select: {
+          organizer_id: true,
+          attendee_count: true,
+        },
+      });
+
+      if (!existingEvent) {
+        throw new Error("Event not found");
+      }
+
+      if (existingEvent.organizer_id !== organizerId) {
+        throw new Error("You do not have permission to delete this event");
+      }
+
+      if (type === "hard") {
+        // Hard delete - Remove the event and all related data
+        // First delete virtual event if exists
+        await prisma.virtualEvent.deleteMany({
+          where: { eventId },
+        });
+
+        // Delete the event and cascade to attendees
+        const event = await prisma.event.delete({
+          where: { id: eventId },
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        });
+
+        return {
+          success: true,
+          event,
+          message: "Event permanently deleted",
+        };
+      } else {
+        // Soft delete - Update status to cancelled and keep the data
+        const event = await prisma.event.update({
+          where: { id: eventId },
+          data: {
+            status: "cancelled",
+            updated_at: new Date(),
+          },
+          include: {
+            category: {
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+            },
+          },
+        });
+
+        return {
+          success: true,
+          event,
+          message: "Event cancelled successfully",
+        };
+      }
+    },
+    {
+      success: false,
+      event: null,
+      error: "Failed to delete event",
+    }
+  );
+
+  return result.data;
+}

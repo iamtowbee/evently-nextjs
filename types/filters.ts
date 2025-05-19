@@ -7,4 +7,5 @@ export interface FilterState {
   location: string;
   priceRange: [number, number];
   onlyFreeEvents: boolean;
+  sortBy: "newest" | "oldest" | "price-low" | "price-high";
 }

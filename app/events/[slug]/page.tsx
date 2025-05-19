@@ -2,19 +2,30 @@ import { notFound } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { format } from "date-fns";
-import { CalendarDays, Clock, MapPin, Users, RefreshCcw } from "lucide-react";
+import {
+  CalendarDays,
+  Clock,
+  MapPin,
+  Users,
+  RefreshCcw,
+  Pencil,
+  Trash2,
+} from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { getEventBySlug, getSimilarEvents } from "@/lib/actions/event";
 import { getImageUrl } from "@/lib/utils";
 import { EventCard } from "@/components/events/event-card";
 import type { Event } from "@/types/event";
+import { auth } from "@/auth";
+import { DeleteEventButton } from "@/components/(events)/delete-event-button";
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
 export default async function EventPage({ params }: Props) {
+  const session = await auth();
   const { slug } = await params;
   const result = await getEventBySlug(slug);
 
@@ -68,6 +79,7 @@ export default async function EventPage({ params }: Props) {
 
   const event = result.data;
   const imageUrl = getImageUrl(event.image_url);
+  const isOrganizer = session?.user?.id === event.organizer_id;
 
   // Fetch similar events with error handling
   let similarEvents: Event[] = [];
@@ -116,7 +128,23 @@ export default async function EventPage({ params }: Props) {
                   </Badge>
                 </Link>
               )}
-              <h1 className="text-3xl font-bold">{event.name}</h1>
+              <div className="flex items-center justify-between gap-4">
+                <h1 className="text-3xl font-bold">{event.name}</h1>
+                {isOrganizer && (
+                  <div className="flex items-center gap-2">
+                    <Button asChild variant="outline" size="sm">
+                      <Link href={`/events/${event.slug}/edit`}>
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Edit Event
+                      </Link>
+                    </Button>
+                    <DeleteEventButton
+                      eventId={event.id}
+                      eventName={event.name}
+                    />
+                  </div>
+                )}
+              </div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <span>Organized by</span>
                 <span className="font-medium text-foreground">

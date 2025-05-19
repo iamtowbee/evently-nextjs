@@ -1,4 +1,4 @@
-import { CreateEventForm } from "@/components/create-event-form";
+import { EventForm } from "@/components/event-form";
 
 export default function CreateEventPage() {
   return (
@@ -11,7 +11,7 @@ export default function CreateEventPage() {
               Fill in the details below to create a new event.
             </p>
           </div>
-          <CreateEventForm />
+          <EventForm mode="create" />
         </div>
       </div>
     </main>

@@ -55,46 +55,45 @@ export function CategorySelect({
 
   return (
     <>
-      <FormItem>
-        <FormLabel>Category</FormLabel>
-        <Select
-          onValueChange={handleCategoryChange}
-          defaultValue={defaultValue}
-        >
-          <FormControl>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a category" />
-            </SelectTrigger>
-          </FormControl>
-          <SelectContent>
-            {isLoadingCategories ? (
-              <SelectItem value="loading" disabled>
-                Loading categories...
-              </SelectItem>
-            ) : categoriesData?.length ? (
-              <>
-                {categoriesData.map((category) => (
-                  <SelectItem key={category.id} value={category.id}>
-                    {category.name}
-                  </SelectItem>
-                ))}
-                <SelectItem value="other">
-                  Other (Suggest a category)
+      <Select onValueChange={handleCategoryChange} defaultValue={defaultValue}>
+        <FormControl>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+        </FormControl>
+        <SelectContent>
+          {isLoadingCategories ? (
+            <SelectItem value="loading" disabled>
+              Loading categories...
+            </SelectItem>
+          ) : categoriesData?.length ? (
+            <>
+              {categoriesData.map((category) => (
+                <SelectItem key={category.id} value={category.id}>
+                  {category.name}
                 </SelectItem>
-              </>
-            ) : (
-              <SelectItem value="no-categories" disabled>
-                No categories found
-              </SelectItem>
-            )}
-          </SelectContent>
-        </Select>
+              ))}
+              <SelectItem value="other">Other (Suggest a category)</SelectItem>
+            </>
+          ) : (
+            <SelectItem value="no-categories" disabled>
+              No categories found
+            </SelectItem>
+          )}
+        </SelectContent>
+      </Select>
+      <div className="mt-2">
+        <FormDescription>
+          Select the most appropriate category for your event
+        </FormDescription>
         <FormMessage />
-      </FormItem>
+      </div>
 
       {showOtherInput && (
-        <FormItem>
-          <FormLabel>Suggest a Category</FormLabel>
+        <div className="mt-4">
+          <div className="mb-2">
+            <FormLabel>Suggest a Category</FormLabel>
+          </div>
           <FormControl>
             <Input
               placeholder="e.g., Virtual Events, Workshops, etc."
@@ -102,11 +101,13 @@ export function CategorySelect({
               onChange={(e) => handleOtherCategoryChange(e.target.value)}
             />
           </FormControl>
-          <FormDescription>
-            Your suggestion will be reviewed by our team.
-          </FormDescription>
-          <FormMessage />
-        </FormItem>
+          <div className="mt-2">
+            <FormDescription>
+              Your suggestion will be reviewed by our team.
+            </FormDescription>
+            <FormMessage />
+          </div>
+        </div>
       )}
     </>
   );

@@ -35,12 +35,15 @@ import {
 import { Switch } from "@/components/ui/switch";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { createEvent } from "@/lib/actions/event";
+import { createEvent, updateEvent } from "@/lib/actions/event";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { UploadButton } from "@/components/ui/upload-button";
 import { CategorySelect } from "@/components/category-select";
 import { useSession } from "next-auth/react";
+import { Event } from "@/types/event";
+import { useQuery } from "@tanstack/react-query";
+import { getCategories } from "@/lib/actions/category";
 
 const EVENT_TYPES = [
   {
@@ -125,25 +128,49 @@ const formSchema = z
     }
   );
 
-export function CreateEventForm() {
+interface EventFormProps {
+  mode?: "create" | "edit";
+  event?: Event & {
+    virtual_event?: { url: string } | null;
+    status?: "draft" | "published";
+  };
+}
+
+export function EventForm({ mode = "create", event }: EventFormProps) {
   const router = useRouter();
   const { toast } = useToast();
   const { data: session } = useSession();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
+  const { data: categoriesData } = useQuery({
+    queryKey: ["categories"],
+    queryFn: async () => {
+      const result = await getCategories();
+      return result?.categories || [];
+    },
+  });
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      name: "",
-      description: "",
-      location: "",
-      venue: "",
-      event_type: "in-person",
-      url: "",
-      is_free: false,
-      start_time: "09:00",
-      end_time: "17:00",
-      status: "draft",
+      name: event?.name || "",
+      description: event?.description || "",
+      location: event?.location || "",
+      venue: event?.venue || "",
+      event_type: (event?.virtual_event ? "virtual" : "in-person") as
+        | "in-person"
+        | "virtual"
+        | "hybrid",
+      url: event?.virtual_event?.url || "",
+      is_free: event?.is_free || false,
+      start_time: event?.start_time || "09:00",
+      end_time: event?.end_time || "17:00",
+      status: event?.status || "draft",
+      category_id: event?.category_id || "",
+      price: event?.price || undefined,
+      max_attendees: event?.max_attendees || undefined,
+      image_url: event?.image_url || undefined,
+      date: event?.date ? new Date(event.date) : undefined,
     },
   });
 
@@ -155,7 +182,7 @@ export function CreateEventForm() {
       toast({
         variant: "destructive",
         title: "Error",
-        description: "You must be logged in to create an event",
+        description: "You must be logged in to manage events",
       });
       return;
     }
@@ -172,7 +199,7 @@ export function CreateEventForm() {
       const [endHour, endMinute] = values.end_time.split(":").map(Number);
       endDateTime.setHours(endHour, endMinute);
 
-      const response = await createEvent({
+      const eventData = {
         name: values.name,
         description: values.description,
         location: values.location,
@@ -188,19 +215,26 @@ export function CreateEventForm() {
         eventType: values.event_type,
         url: values.url,
         organizerId: session.user.id,
-      });
+      };
+
+      const response =
+        mode === "create"
+          ? await createEvent(eventData)
+          : await updateEvent(event!.id, eventData);
 
       if (response?.success) {
         toast({
           title: "Success",
-          description: "Event created successfully!",
+          description: `Event ${
+            mode === "create" ? "created" : "updated"
+          } successfully!`,
         });
-        router.push("/");
+        router.push(`/events/${response.event?.slug || ""}`);
       } else {
         toast({
           variant: "destructive",
           title: "Error",
-          description: response?.error || "Failed to create event",
+          description: response?.error || `Failed to ${mode} event`,
         });
       }
     } catch (error) {
@@ -219,24 +253,29 @@ export function CreateEventForm() {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-        <div className="grid gap-8 md:grid-cols-2">
-          <div className="space-y-8">
+        <div className="grid grid-cols-1 gap-y-8 md:grid-cols-2 md:gap-x-8">
+          {/* Left Column */}
+          <div className="space-y-6">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Name</FormLabel>
+                  <div className="mb-2">
+                    <FormLabel>Event Name</FormLabel>
+                  </div>
                   <FormControl>
                     <Input
                       placeholder="Summer Music Festival 2024"
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    The name of your event as it will appear to attendees.
-                  </FormDescription>
-                  <FormMessage />
+                  <div className="mt-2">
+                    <FormDescription>
+                      The name of your event as it will appear to attendees.
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -246,7 +285,9 @@ export function CreateEventForm() {
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <div className="mb-2">
+                    <FormLabel>Description</FormLabel>
+                  </div>
                   <FormControl>
                     <Textarea
                       placeholder="Tell people what your event is about..."
@@ -254,10 +295,12 @@ export function CreateEventForm() {
                       {...field}
                     />
                   </FormControl>
-                  <FormDescription>
-                    Provide details about your event.
-                  </FormDescription>
-                  <FormMessage />
+                  <div className="mt-2">
+                    <FormDescription>
+                      Provide details about your event.
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -266,46 +309,42 @@ export function CreateEventForm() {
               control={form.control}
               name="event_type"
               render={({ field }) => (
-                <FormItem className="space-y-3">
-                  <FormLabel>Event Type</FormLabel>
+                <FormItem>
+                  <div className="mb-2">
+                    <FormLabel>Event Type</FormLabel>
+                  </div>
                   <FormControl>
                     <RadioGroup
                       onValueChange={field.onChange}
                       defaultValue={field.value}
-                      className="grid grid-cols-3 gap-4"
+                      className="flex flex-wrap gap-2"
                     >
                       {EVENT_TYPES.map((type) => (
-                        <FormItem key={type.id}>
-                          <FormControl>
-                            <Label
-                              htmlFor={type.id}
-                              className={cn(
-                                "flex flex-col items-center justify-between rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground",
-                                field.value === type.id &&
-                                  "border-primary [&:has([data-state=checked])]:border-primary"
-                              )}
-                            >
-                              <RadioGroupItem
-                                value={type.id}
-                                id={type.id}
-                                className="sr-only"
-                              />
-                              <type.icon className="mb-3 h-6 w-6" />
-                              <div className="space-y-1 text-center">
-                                <h3 className="font-medium leading-none">
-                                  {type.label}
-                                </h3>
-                                <p className="text-xs text-muted-foreground">
-                                  {type.description}
-                                </p>
-                              </div>
-                            </Label>
-                          </FormControl>
-                        </FormItem>
+                        <div key={type.id} className="flex-none">
+                          <RadioGroupItem
+                            value={type.id}
+                            id={type.id}
+                            className="peer sr-only"
+                          />
+                          <Label
+                            htmlFor={type.id}
+                            className={cn(
+                              "inline-flex h-9 items-center gap-1.5 rounded-md border px-3 py-2 text-sm font-medium ring-offset-background transition-all hover:bg-accent hover:text-accent-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&:has([data-state=checked])]:border-primary [&:has([data-state=checked])]:text-primary",
+                              field.value === type.id
+                                ? "border-primary bg-primary/5 text-primary"
+                                : "border-muted-foreground/20"
+                            )}
+                          >
+                            <type.icon className="h-3.5 w-3.5" />
+                            <span>{type.label}</span>
+                          </Label>
+                        </div>
                       ))}
                     </RadioGroup>
                   </FormControl>
-                  <FormMessage />
+                  <div className="mt-2">
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -317,14 +356,19 @@ export function CreateEventForm() {
                   name="location"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Location</FormLabel>
+                      <div className="mb-2">
+                        <FormLabel>Location</FormLabel>
+                      </div>
                       <FormControl>
                         <Input placeholder="New York, USA" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        The general location of your event (e.g. city, country)
-                      </FormDescription>
-                      <FormMessage />
+                      <div className="mt-2">
+                        <FormDescription>
+                          The general location of your event (e.g. city,
+                          country)
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -334,14 +378,18 @@ export function CreateEventForm() {
                   name="venue"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Venue</FormLabel>
+                      <div className="mb-2">
+                        <FormLabel>Venue</FormLabel>
+                      </div>
                       <FormControl>
                         <Input placeholder="Central Park" {...field} />
                       </FormControl>
-                      <FormDescription>
-                        The specific venue where your event will be held
-                      </FormDescription>
-                      <FormMessage />
+                      <div className="mt-2">
+                        <FormDescription>
+                          The specific venue where your event will be held
+                        </FormDescription>
+                        <FormMessage />
+                      </div>
                     </FormItem>
                   )}
                 />
@@ -354,7 +402,9 @@ export function CreateEventForm() {
                 name="url"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Event URL</FormLabel>
+                    <div className="mb-2">
+                      <FormLabel>Event URL</FormLabel>
+                    </div>
                     <FormControl>
                       <Input
                         type="url"
@@ -362,24 +412,29 @@ export function CreateEventForm() {
                         {...field}
                       />
                     </FormControl>
-                    <FormDescription>
-                      The URL where attendees can join your virtual event
-                    </FormDescription>
-                    <FormMessage />
+                    <div className="mt-2">
+                      <FormDescription>
+                        The URL where attendees can join your virtual event
+                      </FormDescription>
+                      <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
             )}
           </div>
 
-          <div className="space-y-8">
-            <div className="grid gap-4 md:grid-cols-[2fr,1fr,1fr]">
+          {/* Right Column */}
+          <div className="space-y-6">
+            <div className="grid grid-cols-1 gap-6 md:grid-cols-3 md:gap-4">
               <FormField
                 control={form.control}
                 name="date"
                 render={({ field }) => (
-                  <FormItem className="flex flex-col">
-                    <FormLabel>Date</FormLabel>
+                  <FormItem className="col-span-1 md:col-span-1">
+                    <div className="mb-2">
+                      <FormLabel>Date</FormLabel>
+                    </div>
                     <Popover>
                       <PopoverTrigger asChild>
                         <FormControl>
@@ -411,7 +466,9 @@ export function CreateEventForm() {
                         />
                       </PopoverContent>
                     </Popover>
-                    <FormMessage />
+                    <div className="mt-2">
+                      <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
@@ -420,12 +477,16 @@ export function CreateEventForm() {
                 control={form.control}
                 name="start_time"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Start Time</FormLabel>
+                  <FormItem className="col-span-1 md:col-span-1">
+                    <div className="mb-2">
+                      <FormLabel>Start Time</FormLabel>
+                    </div>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <div className="mt-2">
+                      <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
@@ -434,12 +495,16 @@ export function CreateEventForm() {
                 control={form.control}
                 name="end_time"
                 render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>End Time</FormLabel>
+                  <FormItem className="col-span-1 md:col-span-1">
+                    <div className="mb-2">
+                      <FormLabel>End Time</FormLabel>
+                    </div>
                     <FormControl>
                       <Input type="time" {...field} />
                     </FormControl>
-                    <FormMessage />
+                    <div className="mt-2">
+                      <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
@@ -449,10 +514,15 @@ export function CreateEventForm() {
               control={form.control}
               name="category_id"
               render={({ field }) => (
-                <CategorySelect
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                />
+                <FormItem>
+                  <div className="mb-2">
+                    <FormLabel>Category</FormLabel>
+                  </div>
+                  <CategorySelect
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  />
+                </FormItem>
               )}
             />
 
@@ -461,7 +531,9 @@ export function CreateEventForm() {
               name="max_attendees"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Maximum Attendees</FormLabel>
+                  <div className="mb-2">
+                    <FormLabel>Maximum Attendees</FormLabel>
+                  </div>
                   <FormControl>
                     <Input
                       type="number"
@@ -475,10 +547,12 @@ export function CreateEventForm() {
                       }
                     />
                   </FormControl>
-                  <FormDescription>
-                    Leave empty for unlimited attendees
-                  </FormDescription>
-                  <FormMessage />
+                  <div className="mt-2">
+                    <FormDescription>
+                      Leave empty for unlimited attendees
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
@@ -487,7 +561,7 @@ export function CreateEventForm() {
               control={form.control}
               name="is_free"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 space-y-0">
                   <div className="space-y-0.5">
                     <FormLabel className="text-base">Free Event</FormLabel>
                     <FormDescription>
@@ -510,7 +584,9 @@ export function CreateEventForm() {
                 name="price"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Ticket Price</FormLabel>
+                    <div className="mb-2">
+                      <FormLabel>Ticket Price</FormLabel>
+                    </div>
                     <FormControl>
                       <div className="relative">
                         <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
@@ -533,7 +609,9 @@ export function CreateEventForm() {
                         />
                       </div>
                     </FormControl>
-                    <FormMessage />
+                    <div className="mt-2">
+                      <FormMessage />
+                    </div>
                   </FormItem>
                 )}
               />
@@ -544,7 +622,9 @@ export function CreateEventForm() {
               name="image_url"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Event Image</FormLabel>
+                  <div className="mb-2">
+                    <FormLabel>Event Image</FormLabel>
+                  </div>
                   <FormControl>
                     <UploadButton
                       value={field.value}
@@ -552,39 +632,44 @@ export function CreateEventForm() {
                       className="w-full"
                     />
                   </FormControl>
-                  <FormDescription>
-                    Upload an image for your event
-                  </FormDescription>
-                  <FormMessage />
+                  <div className="mt-2">
+                    <FormDescription>
+                      Upload an image for your event
+                    </FormDescription>
+                    <FormMessage />
+                  </div>
                 </FormItem>
               )}
             />
 
-            <div className="flex items-center gap-4">
-              <FormField
-                control={form.control}
-                name="status"
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <Select
-                      onValueChange={field.onChange}
-                      defaultValue={field.value}
-                    >
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select status" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="draft">Draft</SelectItem>
-                        <SelectItem value="published">Published</SelectItem>
-                      </SelectContent>
-                    </Select>
+            <FormField
+              control={form.control}
+              name="status"
+              render={({ field }) => (
+                <FormItem>
+                  <div className="mb-2">
+                    <FormLabel>Status</FormLabel>
+                  </div>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select status" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="draft">Draft</SelectItem>
+                      <SelectItem value="published">Published</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <div className="mt-2">
                     <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+                  </div>
+                </FormItem>
+              )}
+            />
           </div>
         </div>
 
@@ -601,10 +686,12 @@ export function CreateEventForm() {
             {isSubmitting ? (
               <>
                 <span className="loading loading-spinner loading-sm mr-2"></span>
-                Creating...
+                {mode === "create" ? "Creating..." : "Updating..."}
               </>
-            ) : (
+            ) : mode === "create" ? (
               "Create Event"
+            ) : (
+              "Update Event"
             )}
           </Button>
         </div>

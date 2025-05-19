@@ -10,10 +10,26 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
+  CardFooter,
 } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useSearchParams } from "next/navigation";
+import { AlertCircle } from "lucide-react";
 
 export default function LoginPage() {
   const [isLoading, setIsLoading] = React.useState(false);
+  const searchParams = useSearchParams();
+  const error = searchParams.get("error");
+
+  const errorMessages = {
+    OAuthAccountNotLinked:
+      "There was an issue linking your GitHub account. Please try signing out of GitHub completely and signing in again.",
+    OAuthSignin:
+      "Error occurred while signing in with GitHub. Please try again.",
+    OAuthCallback:
+      "Error occurred while processing GitHub login. Please try again.",
+    default: "An error occurred during sign in. Please try again.",
+  };
 
   async function handleSignIn() {
     try {
@@ -38,6 +54,15 @@ export default function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent className="grid gap-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                {errorMessages[error as keyof typeof errorMessages] ||
+                  errorMessages.default}
+              </AlertDescription>
+            </Alert>
+          )}
           <Button
             variant="outline"
             onClick={handleSignIn}
@@ -52,6 +77,11 @@ export default function LoginPage() {
             Continue with GitHub
           </Button>
         </CardContent>
+        <CardFooter className="justify-center text-sm text-muted-foreground">
+          <p>
+            By continuing, you agree to our Terms of Service and Privacy Policy.
+          </p>
+        </CardFooter>
       </Card>
     </div>
   );
